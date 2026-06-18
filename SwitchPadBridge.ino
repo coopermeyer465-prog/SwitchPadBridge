@@ -144,15 +144,13 @@ const char INDEX_HTML[] PROGMEM = R"HTML(
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#0b0e12">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>SwitchPadBridge</title>
 <style>
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#0b0e12;color:#f5f7fa;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;touch-action:none;user-select:none;-webkit-user-select:none}
 button{font:inherit;color:inherit;touch-action:none;cursor:pointer}
 .gamepad{position:fixed;inset:0;width:100vw;height:100vh;height:100dvh;overflow:hidden;background:#0b0e12}
-.side{position:absolute;top:0;bottom:0;width:42%;min-width:300px}
+.side{position:absolute;top:0;bottom:0;width:50%;min-width:300px}
 .left{left:0}.right{right:0}
 .utility{position:absolute;z-index:5;top:max(14px,env(safe-area-inset-top));left:50%;display:flex;gap:clamp(8px,1.4vw,18px);transform:translateX(-50%)}
 .utility button,.shoulders button{border:1px solid #4b5561;background:#242a31;box-shadow:0 5px 12px #0008,inset 0 1px #ffffff12;font-weight:750}
@@ -161,10 +159,10 @@ button{font:inherit;color:inherit;touch-action:none;cursor:pointer}
 .left .shoulders{left:max(14px,env(safe-area-inset-left))}.right .shoulders{right:max(14px,env(safe-area-inset-right))}
 .shoulders button{position:relative;width:clamp(64px,8vw,112px);height:clamp(34px,4.2vw,48px);border-radius:7px;font-size:clamp(14px,1.7vw,20px)}
 .control{position:absolute}
-.stick{width:clamp(112px,15vw,174px);aspect-ratio:1;border-radius:50%;background:#151a20;border:2px solid #49515b;box-shadow:0 8px 20px #0009,inset 0 0 0 10px #222830;touch-action:none}
+.stick{position:fixed;z-index:4;width:clamp(112px,15vw,174px);aspect-ratio:1;border-radius:50%;background:#151a20;border:2px solid #49515b;box-shadow:0 8px 20px #0009,inset 0 0 0 10px #222830;opacity:0;pointer-events:none;transform:translate(-50%,-50%);transition:opacity 80ms ease}
+.stick.active{opacity:1}
 .stick:after{content:"";position:absolute;inset:19%;border:1px solid #555e68;border-radius:50%}
 .nub{position:absolute;z-index:2;left:50%;top:50%;width:45%;aspect-ratio:1;border-radius:50%;transform:translate(-50%,-50%);background:#343b44;border:2px solid #626b76;box-shadow:0 5px 9px #0008}
-#stickL{left:max(5vw,env(safe-area-inset-left));top:27%}#stickR{right:max(6vw,env(safe-area-inset-right));bottom:7%}
 .face{right:max(4.5vw,env(safe-area-inset-right));top:25%;width:clamp(158px,20vw,226px);aspect-ratio:1}
 .face button{position:absolute;width:clamp(54px,6.6vw,76px);aspect-ratio:1;border:2px solid #555e68;border-radius:50%;background:#282e35;box-shadow:0 6px 12px #0009;font-size:clamp(19px,2.4vw,28px);font-weight:800}
 #bX{left:50%;top:0;transform:translateX(-50%);color:#4ba9ff}#bB{left:50%;bottom:0;transform:translateX(-50%);color:#ffd83d}#bY{left:0;top:50%;transform:translateY(-50%);color:#43d778}#bA{right:0;top:50%;transform:translateY(-50%);color:#ff625c}
@@ -178,18 +176,16 @@ button{font:inherit;color:inherit;touch-action:none;cursor:pointer}
 .statusbar.connection{top:max(74px,calc(env(safe-area-inset-top) + 62px));left:50%;transform:translateX(-50%)}
 .statusbar.physical{top:auto;bottom:max(10px,env(safe-area-inset-bottom));left:50%;right:auto;transform:translateX(-50%);max-width:34%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .dot{width:9px;height:9px;flex:none;border-radius:50%;background:#e05555;box-shadow:0 0 0 3px #e0555525}.dot.ok{background:#24d6cf;box-shadow:0 0 0 3px #24d6cf28}
-.fullscreen{position:relative;width:42px;height:42px;border:1px solid #4b5561;border-radius:7px;background:#20262d}
-.fullscreen i,.fullscreen i:before,.fullscreen i:after{position:absolute;content:"";width:8px;height:8px;border-color:#e9eef4}.fullscreen i{left:9px;top:9px;border-left:2px solid;border-top:2px solid}.fullscreen i:before{left:14px;top:-2px;border-right:2px solid;border-top:2px solid}.fullscreen i:after{left:-2px;top:14px;border-left:2px solid;border-bottom:2px solid}.fullscreen span{position:absolute;right:9px;bottom:9px;width:8px;height:8px;border-right:2px solid;border-bottom:2px solid}
 button.down,button:active{background:#3b4652!important;box-shadow:inset 0 2px 7px #000b!important;transform:translateY(1px)}
 .face button.down,.face button:active{transform:translateY(-50%) scale(.96)}#bX.down,#bX:active,#bB.down,#bB:active{transform:translateX(-50%) scale(.96)}
 @media(orientation:portrait){
  .side{top:76px;width:50%;min-width:0}.utility{top:max(12px,env(safe-area-inset-top));gap:7px}.utility button{width:42px;height:40px;font-size:13px}.statusbar.connection{display:none}
  .shoulders{top:10px;gap:5px}.shoulders button{width:clamp(58px,17vw,92px);height:34px;font-size:13px}.left .shoulders{left:8px}.right .shoulders{right:8px}
- .stick{width:clamp(104px,34vw,164px)}#stickL{left:50%;top:13%;transform:translateX(-50%)}#stickR{right:50%;bottom:7%;transform:translateX(50%)}
+ .stick{width:clamp(104px,34vw,164px)}
  .dpad{left:50%;bottom:8%;width:clamp(122px,38vw,174px);transform:translateX(-50%)}.face{right:50%;top:18%;width:clamp(142px,40vw,188px);transform:translateX(50%)}
  .statusbar.physical{max-width:76%;font-size:11px}
 }
-@media(orientation:landscape) and (max-height:430px){.statusbar.connection{display:none}.stick{width:clamp(104px,24vh,132px)}.face{width:clamp(146px,40vh,176px)}.dpad{width:clamp(122px,36vh,158px)}#stickL{top:27%}#stickR{bottom:4%}.face{top:25%}.dpad{bottom:4%}.shoulders button{height:38px}.utility button{height:38px}.statusbar.physical{bottom:4px}}
+@media(orientation:landscape) and (max-height:430px){.statusbar.connection{display:none}.stick{width:clamp(104px,24vh,132px)}.face{width:clamp(146px,40vh,176px)}.dpad{width:clamp(122px,36vh,158px)}.face{top:25%}.dpad{bottom:4%}.shoulders button{height:38px}.utility button{height:38px}.statusbar.physical{bottom:4px}}
 </style>
 </head>
 <body>
@@ -199,7 +195,6 @@ button.down,button:active{background:#3b4652!important;box-shadow:inset 0 2px 7p
     <button data-bit="4096" aria-label="Home">HOME</button>
     <button data-bit="8192" aria-label="Capture">CAP</button>
     <button data-bit="256" aria-label="Minus">-</button>
-    <button id="fullscreen" class="fullscreen" aria-label="Enter fullscreen"><i></i><span></span></button>
   </div>
   <section class="side left" aria-label="Left controls">
     <div class="shoulders"><button data-bit="16">L</button><button data-bit="64">ZL</button></div>
@@ -265,13 +260,13 @@ for(const b of document.querySelectorAll("button[data-dir]")){
   const off=e=>{e.preventDefault();dirs.delete(b.dataset.dir);b.classList.remove("down");updateHat()};
   b.addEventListener("pointerup",off);b.addEventListener("pointercancel",off);b.addEventListener("lostpointercapture",off);
 }
-for(const stick of document.querySelectorAll(".stick")){
-  const nub=stick.querySelector(".nub"),x=stick.dataset.x,y=stick.dataset.y,click=Number(stick.dataset.click);let pointer=null,start=0;
-  const move=e=>{const r=stick.getBoundingClientRect(),max=r.width*.31;let dx=e.clientX-r.left-r.width/2,dy=e.clientY-r.top-r.height/2,d=Math.hypot(dx,dy);if(d>max){dx=dx/d*max;dy=dy/d*max}nub.style.transform=`translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px))`;touch[x]=Math.round(128+dx/max*127);touch[y]=Math.round(128+dy/max*127);send()};
-  stick.addEventListener("pointerdown",e=>{e.preventDefault();pointer=e.pointerId;start=performance.now();activeSticks[x]=true;stick.setPointerCapture(pointer);move(e)});
-  stick.addEventListener("pointermove",e=>{if(e.pointerId===pointer)move(e)});
-  const end=e=>{if(pointer===null)return;if(performance.now()-start<180){touch.buttons|=click;setTimeout(()=>{touch.buttons&=~click;send()},70)}pointer=null;activeSticks[x]=false;nub.style.transform="translate(-50%,-50%)";touch[x]=128;touch[y]=128;send()};
-  stick.addEventListener("pointerup",end);stick.addEventListener("pointercancel",end);stick.addEventListener("lostpointercapture",end);
+for(const zone of document.querySelectorAll(".side")){
+  const stick=zone.querySelector(".stick"),nub=stick.querySelector(".nub"),x=stick.dataset.x,y=stick.dataset.y;let pointer=null,baseX=0,baseY=0;
+  const move=e=>{const max=stick.getBoundingClientRect().width*.31;let dx=e.clientX-baseX,dy=e.clientY-baseY,d=Math.hypot(dx,dy);if(d>max){dx=dx/d*max;dy=dy/d*max}nub.style.transform=`translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px))`;touch[x]=Math.round(128+dx/max*127);touch[y]=Math.round(128+dy/max*127);send()};
+  zone.addEventListener("pointerdown",e=>{if(pointer!==null||e.target.closest("button,.dpad,.face,.shoulders"))return;e.preventDefault();pointer=e.pointerId;baseX=e.clientX;baseY=e.clientY;stick.style.left=`${baseX}px`;stick.style.top=`${baseY}px`;stick.classList.add("active");activeSticks[x]=true;zone.setPointerCapture(pointer);move(e)});
+  zone.addEventListener("pointermove",e=>{if(e.pointerId===pointer)move(e)});
+  const end=e=>{if(e.pointerId!==pointer)return;pointer=null;activeSticks[x]=false;stick.classList.remove("active");nub.style.transform="translate(-50%,-50%)";touch[x]=128;touch[y]=128;send()};
+  zone.addEventListener("pointerup",end);zone.addEventListener("pointercancel",end);zone.addEventListener("lostpointercapture",end);
 }
 function pressed(g,i){return !!g.buttons[i]&&(g.buttons[i].pressed||g.buttons[i].value>.5)}
 function pollGamepads(){
@@ -291,10 +286,6 @@ function pollGamepads(){
   send();requestAnimationFrame(pollGamepads);
 }
 window.addEventListener("gamepadconnected",()=>send(true));window.addEventListener("gamepaddisconnected",()=>send(true));pollGamepads();setInterval(()=>send(true),250);
-document.getElementById("fullscreen").addEventListener("click",async()=>{
-  try{if(!document.fullscreenElement){await document.documentElement.requestFullscreen?.();await screen.orientation?.lock?.("landscape")}else await document.exitFullscreen?.()}catch(e){}
-  window.scrollTo(0,1);
-});
 document.addEventListener("contextmenu",e=>e.preventDefault());
 </script>
 </body>
