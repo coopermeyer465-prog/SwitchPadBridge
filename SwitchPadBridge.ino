@@ -21,7 +21,7 @@ static const uint16_t UDP_PORT = 7777;
 static const uint16_t WS_PORT = 81;
 static const uint32_t REPORT_INTERVAL_US = 5000;
 static const uint32_t INPUT_TIMEOUT_MS = 800;
-static const uint32_t WS_READ_TIMEOUT_MS = 40;
+static const uint32_t WS_READ_TIMEOUT_MS = 500;
 
 enum SwitchButton : uint16_t {
   SW_Y = 0x0001,
@@ -157,9 +157,9 @@ button{font:inherit;color:inherit;touch-action:none;cursor:pointer}
 .utility{position:absolute;z-index:5;top:max(14px,env(safe-area-inset-top));left:50%;display:flex;gap:clamp(8px,1.4vw,18px);transform:translateX(-50%)}
 .utility button,.shoulders button{border:1px solid #4b5561;background:#242a31;box-shadow:0 5px 12px #0008,inset 0 1px #ffffff12;font-weight:750}
 .utility button{position:relative;width:clamp(44px,5.2vw,62px);height:clamp(38px,5vw,54px);border-radius:7px;font-size:clamp(14px,1.5vw,18px)}
-.shoulders{position:absolute;z-index:3;top:max(14px,env(safe-area-inset-top));display:flex;gap:clamp(8px,1.3vw,16px)}
+.shoulders{position:absolute;z-index:3;top:max(14px,env(safe-area-inset-top));display:flex;flex-direction:column;gap:6px}
 .left .shoulders{left:max(14px,env(safe-area-inset-left))}.right .shoulders{right:max(14px,env(safe-area-inset-right))}
-.shoulders button{position:relative;width:clamp(70px,9vw,132px);height:clamp(42px,5.3vw,60px);border-radius:7px;font-size:clamp(14px,1.7vw,20px)}
+.shoulders button{position:relative;width:clamp(64px,8vw,112px);height:clamp(34px,4.2vw,48px);border-radius:7px;font-size:clamp(14px,1.7vw,20px)}
 .control{position:absolute}
 .stick{width:clamp(112px,15vw,174px);aspect-ratio:1;border-radius:50%;background:#151a20;border:2px solid #49515b;box-shadow:0 8px 20px #0009,inset 0 0 0 10px #222830;touch-action:none}
 .stick:after{content:"";position:absolute;inset:19%;border:1px solid #555e68;border-radius:50%}
@@ -184,7 +184,7 @@ button.down,button:active{background:#3b4652!important;box-shadow:inset 0 2px 7p
 .face button.down,.face button:active{transform:translateY(-50%) scale(.96)}#bX.down,#bX:active,#bB.down,#bB:active{transform:translateX(-50%) scale(.96)}
 @media(orientation:portrait){
  .side{top:76px;width:50%;min-width:0}.utility{top:max(12px,env(safe-area-inset-top));gap:7px}.utility button{width:42px;height:40px;font-size:13px}.statusbar.connection{display:none}
- .shoulders{top:10px;gap:6px}.shoulders button{width:clamp(58px,17vw,92px);height:40px;font-size:13px}.left .shoulders{left:8px}.right .shoulders{right:8px}
+ .shoulders{top:10px;gap:5px}.shoulders button{width:clamp(58px,17vw,92px);height:34px;font-size:13px}.left .shoulders{left:8px}.right .shoulders{right:8px}
  .stick{width:clamp(104px,34vw,164px)}#stickL{left:50%;top:13%;transform:translateX(-50%)}#stickR{right:50%;bottom:7%;transform:translateX(50%)}
  .dpad{left:50%;bottom:8%;width:clamp(122px,38vw,174px);transform:translateX(-50%)}.face{right:50%;top:18%;width:clamp(142px,40vw,188px);transform:translateX(50%)}
  .statusbar.physical{max-width:76%;font-size:11px}
@@ -195,14 +195,14 @@ button.down,button:active{background:#3b4652!important;box-shadow:inset 0 2px 7p
 <body>
 <main class="gamepad">
   <div class="utility">
-    <button data-bit="256" aria-label="Minus">-</button>
-    <button data-bit="4096" aria-label="Home">HOME</button>
     <button data-bit="512" aria-label="Plus">+</button>
+    <button data-bit="4096" aria-label="Home">HOME</button>
     <button data-bit="8192" aria-label="Capture">CAP</button>
+    <button data-bit="256" aria-label="Minus">-</button>
     <button id="fullscreen" class="fullscreen" aria-label="Enter fullscreen"><i></i><span></span></button>
   </div>
   <section class="side left" aria-label="Left controls">
-    <div class="shoulders"><button data-bit="64">ZL</button><button data-bit="16">L</button></div>
+    <div class="shoulders"><button data-bit="16">L</button><button data-bit="64">ZL</button></div>
     <div id="stickL" class="control stick" data-x="lx" data-y="ly" data-click="1024"><div class="nub"></div></div>
     <div class="control dpad">
       <button class="up" data-dir="up" aria-label="Up"></button><button class="south" data-dir="down" aria-label="Down"></button>
@@ -225,12 +225,13 @@ const neutral=()=>({buttons:0,hat:8,lx:128,ly:128,rx:128,ry:128});
 const touch=neutral(), physical=neutral();
 const activeSticks={lx:false,rx:false};
 const dirs=new Set();
-let ws,connected=false,lastSent="",physicalConnected=false;
+let ws,connected=false,lastSent="",physicalConnected=false,wsFailures=0,useHttp=false,httpBusy=false;
 const dot=document.getElementById("dot"),statusEl=document.getElementById("status"),gpEl=document.getElementById("gp");
 function connect(){
+  if(useHttp)return;
   ws=new WebSocket(`ws://${location.hostname}:81/ws`);
   ws.onopen=()=>{connected=true;dot.classList.add("ok");statusEl.textContent="connected";lastSent=""};
-  ws.onclose=()=>{connected=false;dot.classList.remove("ok");statusEl.textContent="reconnecting";setTimeout(connect,700)};
+  ws.onclose=()=>{connected=false;wsFailures++;if(wsFailures>=3){useHttp=true;dot.classList.add("ok");statusEl.textContent="connected";send(true);return}dot.classList.remove("ok");statusEl.textContent="reconnecting";setTimeout(connect,700)};
 }
 connect();
 function merged(){
@@ -241,7 +242,11 @@ function merged(){
     ry:activeSticks.rx?touch.ry:physicalConnected?physical.ry:touch.ry};
 }
 function payload(){const s=merged();return `buttons=${s.buttons}&hat=${s.hat}&lx=${s.lx}&ly=${s.ly}&rx=${s.rx}&ry=${s.ry}`}
-function send(force=false){const p=payload();if((force||p!==lastSent)&&connected){ws.send(p);lastSent=p}}
+function send(force=false){
+  const p=payload();if(!force&&p===lastSent)return;
+  if(connected&&ws?.readyState===WebSocket.OPEN){ws.send(p);lastSent=p;return}
+  if(useHttp&&!httpBusy){httpBusy=true;fetch("/api/input",{method:"POST",headers:{"Content-Type":"text/plain"},body:p}).then(r=>{if(!r.ok)throw Error() ;dot.classList.add("ok");statusEl.textContent="connected";lastSent=p}).catch(()=>{dot.classList.remove("ok");statusEl.textContent="reconnecting"}).finally(()=>httpBusy=false)}
+}
 function pressButton(el,on){
   const bit=Number(el.dataset.bit);touch.buttons=on?touch.buttons|bit:touch.buttons&~bit;el.classList.toggle("down",on);send();
   if(on&&navigator.vibrate)navigator.vibrate(8);
