@@ -142,105 +142,155 @@ const char INDEX_HTML[] PROGMEM = R"HTML(
 <html>
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#0b0e12">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>SwitchPadBridge</title>
 <style>
-html,body{margin:0;height:100%;background:#101419;color:#f6f8fb;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;touch-action:none;user-select:none}
-.wrap{height:100%;display:grid;grid-template-rows:auto 1fr auto;gap:12px;padding:14px;box-sizing:border-box}
-.top{display:flex;align-items:center;justify-content:space-between;font-size:14px;color:#aeb8c4}
-.status{width:10px;height:10px;border-radius:50%;background:#d04d4d;display:inline-block;margin-right:8px}
-.status.ok{background:#30d47a}
-.pad{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:center}
-.cluster{position:relative;aspect-ratio:1;min-height:220px}
-button{position:absolute;border:0;border-radius:999px;background:#27313d;color:#fff;font-weight:700;font-size:20px;box-shadow:inset 0 0 0 1px #3c4652}
-button:active,button.down{background:#2f8cff}
-.face{width:72px;height:72px}
-.small{width:58px;height:42px;font-size:13px;border-radius:10px}
-.stick{position:absolute;left:50%;top:50%;width:166px;height:166px;border-radius:50%;transform:translate(-50%,-50%);background:#171d25;box-shadow:inset 0 0 0 2px #33404d}
-.nub{position:absolute;left:50%;top:50%;width:72px;height:72px;border-radius:50%;transform:translate(-50%,-50%);background:#d7dee8}
-.foot{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
-.foot button{position:static;width:100%;height:44px}
-#bY{left:12%;top:38%}#bA{right:12%;top:38%}#bX{left:50%;top:8%;transform:translateX(-50%)}#bB{left:50%;bottom:8%;transform:translateX(-50%)}
-#bL{left:2%;top:0}#bR{right:2%;top:0}#bZL{left:2%;top:52px}#bZR{right:2%;top:52px}
-@media(max-width:720px){.pad{grid-template-columns:1fr}.cluster{min-height:190px}.face{width:64px;height:64px}.foot{grid-template-columns:repeat(3,1fr)}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#0b0e12;color:#f5f7fa;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;touch-action:none;user-select:none;-webkit-user-select:none}
+button{font:inherit;color:inherit;touch-action:none;cursor:pointer}
+.gamepad{position:fixed;inset:0;width:100vw;height:100vh;height:100dvh;overflow:hidden;background:#0b0e12}
+.side{position:absolute;top:0;bottom:0;width:42%;min-width:300px}
+.left{left:0}.right{right:0}
+.utility{position:absolute;z-index:5;top:max(14px,env(safe-area-inset-top));left:50%;display:flex;gap:clamp(8px,1.4vw,18px);transform:translateX(-50%)}
+.utility button,.shoulders button{border:1px solid #4b5561;background:#242a31;box-shadow:0 5px 12px #0008,inset 0 1px #ffffff12;font-weight:750}
+.utility button{position:relative;width:clamp(44px,5.2vw,62px);height:clamp(38px,5vw,54px);border-radius:7px;font-size:clamp(14px,1.5vw,18px)}
+.shoulders{position:absolute;z-index:3;top:max(14px,env(safe-area-inset-top));display:flex;gap:clamp(8px,1.3vw,16px)}
+.left .shoulders{left:max(14px,env(safe-area-inset-left))}.right .shoulders{right:max(14px,env(safe-area-inset-right))}
+.shoulders button{position:relative;width:clamp(70px,9vw,132px);height:clamp(42px,5.3vw,60px);border-radius:7px;font-size:clamp(14px,1.7vw,20px)}
+.control{position:absolute}
+.stick{width:clamp(112px,15vw,174px);aspect-ratio:1;border-radius:50%;background:#151a20;border:2px solid #49515b;box-shadow:0 8px 20px #0009,inset 0 0 0 10px #222830;touch-action:none}
+.stick:after{content:"";position:absolute;inset:19%;border:1px solid #555e68;border-radius:50%}
+.nub{position:absolute;z-index:2;left:50%;top:50%;width:45%;aspect-ratio:1;border-radius:50%;transform:translate(-50%,-50%);background:#343b44;border:2px solid #626b76;box-shadow:0 5px 9px #0008}
+#stickL{left:max(5vw,env(safe-area-inset-left));top:27%}#stickR{right:max(6vw,env(safe-area-inset-right));bottom:7%}
+.face{right:max(4.5vw,env(safe-area-inset-right));top:25%;width:clamp(158px,20vw,226px);aspect-ratio:1}
+.face button{position:absolute;width:clamp(54px,6.6vw,76px);aspect-ratio:1;border:2px solid #555e68;border-radius:50%;background:#282e35;box-shadow:0 6px 12px #0009;font-size:clamp(19px,2.4vw,28px);font-weight:800}
+#bX{left:50%;top:0;transform:translateX(-50%);color:#4ba9ff}#bB{left:50%;bottom:0;transform:translateX(-50%);color:#ffd83d}#bY{left:0;top:50%;transform:translateY(-50%);color:#43d778}#bA{right:0;top:50%;transform:translateY(-50%);color:#ff625c}
+.dpad{left:max(7vw,env(safe-area-inset-left));bottom:7%;width:clamp(132px,17vw,192px);aspect-ratio:1}
+.dpad button{position:absolute;width:34%;height:42%;border:1px solid #505862;background:#2a3037;font-size:0}
+.dpad button:after{content:"";position:absolute;left:50%;top:50%;width:0;height:0;transform:translate(-50%,-50%);border:8px solid transparent}
+.dpad .up{left:33%;top:0;border-radius:7px 7px 2px 2px}.dpad .south{left:33%;bottom:0;border-radius:2px 2px 7px 7px}.dpad .west{left:0;top:29%;width:42%;height:34%;border-radius:7px 2px 2px 7px}.dpad .east{right:0;top:29%;width:42%;height:34%;border-radius:2px 7px 7px 2px}
+.dpad .up:after{border-bottom-color:#eef2f6;margin-top:-5px}.dpad .south:after{border-top-color:#eef2f6;margin-top:5px}.dpad .west:after{border-right-color:#eef2f6;margin-left:-5px}.dpad .east:after{border-left-color:#eef2f6;margin-left:5px}
+.dpad:after{content:"";position:absolute;pointer-events:none;left:38%;top:38%;width:24%;height:24%;border-radius:50%;background:#242a31;border:1px solid #3e4650}
+.statusbar{position:absolute;z-index:6;display:flex;align-items:center;gap:10px;color:#9ca8b5;font-size:12px}
+.statusbar.connection{top:max(74px,calc(env(safe-area-inset-top) + 62px));left:50%;transform:translateX(-50%)}
+.statusbar.physical{top:auto;bottom:max(10px,env(safe-area-inset-bottom));left:50%;right:auto;transform:translateX(-50%);max-width:34%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dot{width:9px;height:9px;flex:none;border-radius:50%;background:#e05555;box-shadow:0 0 0 3px #e0555525}.dot.ok{background:#24d6cf;box-shadow:0 0 0 3px #24d6cf28}
+.fullscreen{position:relative;width:42px;height:42px;border:1px solid #4b5561;border-radius:7px;background:#20262d}
+.fullscreen i,.fullscreen i:before,.fullscreen i:after{position:absolute;content:"";width:8px;height:8px;border-color:#e9eef4}.fullscreen i{left:9px;top:9px;border-left:2px solid;border-top:2px solid}.fullscreen i:before{left:14px;top:-2px;border-right:2px solid;border-top:2px solid}.fullscreen i:after{left:-2px;top:14px;border-left:2px solid;border-bottom:2px solid}.fullscreen span{position:absolute;right:9px;bottom:9px;width:8px;height:8px;border-right:2px solid;border-bottom:2px solid}
+button.down,button:active{background:#3b4652!important;box-shadow:inset 0 2px 7px #000b!important;transform:translateY(1px)}
+.face button.down,.face button:active{transform:translateY(-50%) scale(.96)}#bX.down,#bX:active,#bB.down,#bB:active{transform:translateX(-50%) scale(.96)}
+@media(orientation:portrait){
+ .side{top:76px;width:50%;min-width:0}.utility{top:max(12px,env(safe-area-inset-top));gap:7px}.utility button{width:42px;height:40px;font-size:13px}.statusbar.connection{display:none}
+ .shoulders{top:10px;gap:6px}.shoulders button{width:clamp(58px,17vw,92px);height:40px;font-size:13px}.left .shoulders{left:8px}.right .shoulders{right:8px}
+ .stick{width:clamp(104px,34vw,164px)}#stickL{left:50%;top:13%;transform:translateX(-50%)}#stickR{right:50%;bottom:7%;transform:translateX(50%)}
+ .dpad{left:50%;bottom:8%;width:clamp(122px,38vw,174px);transform:translateX(-50%)}.face{right:50%;top:18%;width:clamp(142px,40vw,188px);transform:translateX(50%)}
+ .statusbar.physical{max-width:76%;font-size:11px}
+}
+@media(orientation:landscape) and (max-height:430px){.statusbar.connection{display:none}.stick{width:clamp(104px,24vh,132px)}.face{width:clamp(146px,40vh,176px)}.dpad{width:clamp(122px,36vh,158px)}#stickL{top:27%}#stickR{bottom:4%}.face{top:25%}.dpad{bottom:4%}.shoulders button{height:38px}.utility button{height:38px}.statusbar.physical{bottom:4px}}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <div class="top"><div><span id="dot" class="status"></span><span id="status">connecting</span></div><div id="gp">touch</div></div>
-  <div class="pad">
-    <div class="cluster">
-      <div id="stickL" class="stick"><div class="nub"></div></div>
-      <button id="bL" class="small" data-bit="16">L</button>
-      <button id="bZL" class="small" data-bit="64">ZL</button>
-    </div>
-    <div class="cluster">
-      <button id="bY" class="face" data-bit="1">Y</button>
-      <button id="bA" class="face" data-bit="4">A</button>
-      <button id="bX" class="face" data-bit="8">X</button>
-      <button id="bB" class="face" data-bit="2">B</button>
-      <button id="bR" class="small" data-bit="32">R</button>
-      <button id="bZR" class="small" data-bit="128">ZR</button>
-    </div>
+<main class="gamepad">
+  <div class="utility">
+    <button data-bit="256" aria-label="Minus">-</button>
+    <button data-bit="4096" aria-label="Home">HOME</button>
+    <button data-bit="512" aria-label="Plus">+</button>
+    <button data-bit="8192" aria-label="Capture">CAP</button>
+    <button id="fullscreen" class="fullscreen" aria-label="Enter fullscreen"><i></i><span></span></button>
   </div>
-  <div class="foot">
-    <button data-bit="256">-</button><button data-bit="512">+</button><button data-bit="4096">Home</button>
-    <button data-bit="8192">Cap</button><button data-bit="1024">L3</button><button data-bit="2048">R3</button>
-  </div>
-</div>
+  <section class="side left" aria-label="Left controls">
+    <div class="shoulders"><button data-bit="64">ZL</button><button data-bit="16">L</button></div>
+    <div id="stickL" class="control stick" data-x="lx" data-y="ly" data-click="1024"><div class="nub"></div></div>
+    <div class="control dpad">
+      <button class="up" data-dir="up" aria-label="Up"></button><button class="south" data-dir="down" aria-label="Down"></button>
+      <button class="west" data-dir="left" aria-label="Left"></button><button class="east" data-dir="right" aria-label="Right"></button>
+    </div>
+  </section>
+  <section class="side right" aria-label="Right controls">
+    <div class="shoulders"><button data-bit="32">R</button><button data-bit="128">ZR</button></div>
+    <div class="control face">
+      <button id="bX" data-bit="8">X</button><button id="bB" data-bit="2">B</button>
+      <button id="bY" data-bit="1">Y</button><button id="bA" data-bit="4">A</button>
+    </div>
+    <div id="stickR" class="control stick" data-x="rx" data-y="ry" data-click="2048"><div class="nub"></div></div>
+  </section>
+  <div class="statusbar connection"><span id="dot" class="dot"></span><span id="status">connecting</span></div>
+  <div id="gp" class="statusbar physical">touch controls</div>
+</main>
 <script>
-const state={buttons:0,hat:8,lx:128,ly:128,rx:128,ry:128};
-let ws, connected=false, lastSent="";
-const dot=document.getElementById("dot"), statusEl=document.getElementById("status"), gpEl=document.getElementById("gp");
+const neutral=()=>({buttons:0,hat:8,lx:128,ly:128,rx:128,ry:128});
+const touch=neutral(), physical=neutral();
+const activeSticks={lx:false,rx:false};
+const dirs=new Set();
+let ws,connected=false,lastSent="",physicalConnected=false;
+const dot=document.getElementById("dot"),statusEl=document.getElementById("status"),gpEl=document.getElementById("gp");
 function connect(){
   ws=new WebSocket(`ws://${location.hostname}:81/ws`);
-  ws.onopen=()=>{connected=true;dot.classList.add("ok");statusEl.textContent="connected"};
+  ws.onopen=()=>{connected=true;dot.classList.add("ok");statusEl.textContent="connected";lastSent=""};
   ws.onclose=()=>{connected=false;dot.classList.remove("ok");statusEl.textContent="reconnecting";setTimeout(connect,700)};
 }
 connect();
-function payload(){return `buttons=${state.buttons}&hat=${state.hat}&lx=${state.lx}&ly=${state.ly}&rx=${state.rx}&ry=${state.ry}`}
-function send(){const p=payload();if(p!==lastSent&&connected){ws.send(p);lastSent=p}}
+function merged(){
+  return {buttons:touch.buttons|physical.buttons,hat:touch.hat!==8?touch.hat:physical.hat,
+    lx:activeSticks.lx?touch.lx:physicalConnected?physical.lx:touch.lx,
+    ly:activeSticks.lx?touch.ly:physicalConnected?physical.ly:touch.ly,
+    rx:activeSticks.rx?touch.rx:physicalConnected?physical.rx:touch.rx,
+    ry:activeSticks.rx?touch.ry:physicalConnected?physical.ry:touch.ry};
+}
+function payload(){const s=merged();return `buttons=${s.buttons}&hat=${s.hat}&lx=${s.lx}&ly=${s.ly}&rx=${s.rx}&ry=${s.ry}`}
+function send(force=false){const p=payload();if((force||p!==lastSent)&&connected){ws.send(p);lastSent=p}}
+function pressButton(el,on){
+  const bit=Number(el.dataset.bit);touch.buttons=on?touch.buttons|bit:touch.buttons&~bit;el.classList.toggle("down",on);send();
+  if(on&&navigator.vibrate)navigator.vibrate(8);
+}
 for(const b of document.querySelectorAll("button[data-bit]")){
-  const bit=Number(b.dataset.bit);
-  const on=e=>{e.preventDefault();state.buttons|=bit;b.classList.add("down");send()};
-  const off=e=>{e.preventDefault();state.buttons&=~bit;b.classList.remove("down");send()};
-  b.addEventListener("pointerdown",on); b.addEventListener("pointerup",off);
-  b.addEventListener("pointercancel",off); b.addEventListener("pointerleave",off);
+  b.addEventListener("pointerdown",e=>{e.preventDefault();b.setPointerCapture(e.pointerId);pressButton(b,true)});
+  const off=e=>{e.preventDefault();pressButton(b,false)};
+  b.addEventListener("pointerup",off);b.addEventListener("pointercancel",off);b.addEventListener("lostpointercapture",()=>pressButton(b,false));
 }
-const stick=document.getElementById("stickL"), nub=stick.querySelector(".nub");
-let stickId=null;
-function setStick(e){
-  const r=stick.getBoundingClientRect(), cx=r.left+r.width/2, cy=r.top+r.height/2, max=r.width*0.34;
-  let dx=e.clientX-cx, dy=e.clientY-cy, d=Math.hypot(dx,dy);
-  if(d>max){dx=dx/d*max;dy=dy/d*max}
-  nub.style.transform=`translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px))`;
-  state.lx=Math.round(128+dx/max*127); state.ly=Math.round(128+dy/max*127); send();
+function updateHat(){
+  const u=dirs.has("up"),d=dirs.has("down"),l=dirs.has("left"),r=dirs.has("right");
+  touch.hat=u&&r?1:r&&d?3:d&&l?5:l&&u?7:u?0:r?2:d?4:l?6:8;send();
 }
-stick.addEventListener("pointerdown",e=>{stickId=e.pointerId;stick.setPointerCapture(stickId);setStick(e)});
-stick.addEventListener("pointermove",e=>{if(e.pointerId===stickId)setStick(e)});
-function centerStick(){stickId=null;nub.style.transform="translate(-50%,-50%)";state.lx=128;state.ly=128;send()}
-stick.addEventListener("pointerup",centerStick); stick.addEventListener("pointercancel",centerStick);
-function pollGamepad(){
-  const gps=navigator.getGamepads?navigator.getGamepads():[];
-  const g=[...gps].find(Boolean);
-  if(g){
-    gpEl.textContent=g.id.slice(0,24);
-    let b=0;
-    const map=[2,1,0,3,4,5,6,7,8,9,10,11,16,17];
-    const bits=[2,4,1,8,16,32,64,128,256,512,1024,2048,4096,8192];
-    map.forEach((idx,i)=>{if(g.buttons[idx]?.pressed)b|=bits[i]});
-    state.buttons=b;
-    state.lx=Math.round((g.axes[0]||0)*127+128); state.ly=Math.round((g.axes[1]||0)*127+128);
-    state.rx=Math.round((g.axes[2]||0)*127+128); state.ry=Math.round((g.axes[3]||0)*127+128);
-    state.hat=8;
-    if(g.buttons[12]?.pressed)state.hat=0; else if(g.buttons[13]?.pressed)state.hat=4;
-    else if(g.buttons[14]?.pressed)state.hat=6; else if(g.buttons[15]?.pressed)state.hat=2;
-    send();
-  }
-  requestAnimationFrame(pollGamepad);
+for(const b of document.querySelectorAll("button[data-dir]")){
+  b.addEventListener("pointerdown",e=>{e.preventDefault();b.setPointerCapture(e.pointerId);dirs.add(b.dataset.dir);b.classList.add("down");updateHat()});
+  const off=e=>{e.preventDefault();dirs.delete(b.dataset.dir);b.classList.remove("down");updateHat()};
+  b.addEventListener("pointerup",off);b.addEventListener("pointercancel",off);b.addEventListener("lostpointercapture",off);
 }
-pollGamepad();
-setInterval(send,16);
+for(const stick of document.querySelectorAll(".stick")){
+  const nub=stick.querySelector(".nub"),x=stick.dataset.x,y=stick.dataset.y,click=Number(stick.dataset.click);let pointer=null,start=0;
+  const move=e=>{const r=stick.getBoundingClientRect(),max=r.width*.31;let dx=e.clientX-r.left-r.width/2,dy=e.clientY-r.top-r.height/2,d=Math.hypot(dx,dy);if(d>max){dx=dx/d*max;dy=dy/d*max}nub.style.transform=`translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px))`;touch[x]=Math.round(128+dx/max*127);touch[y]=Math.round(128+dy/max*127);send()};
+  stick.addEventListener("pointerdown",e=>{e.preventDefault();pointer=e.pointerId;start=performance.now();activeSticks[x]=true;stick.setPointerCapture(pointer);move(e)});
+  stick.addEventListener("pointermove",e=>{if(e.pointerId===pointer)move(e)});
+  const end=e=>{if(pointer===null)return;if(performance.now()-start<180){touch.buttons|=click;setTimeout(()=>{touch.buttons&=~click;send()},70)}pointer=null;activeSticks[x]=false;nub.style.transform="translate(-50%,-50%)";touch[x]=128;touch[y]=128;send()};
+  stick.addEventListener("pointerup",end);stick.addEventListener("pointercancel",end);stick.addEventListener("lostpointercapture",end);
+}
+function pressed(g,i){return !!g.buttons[i]&&(g.buttons[i].pressed||g.buttons[i].value>.5)}
+function pollGamepads(){
+  const pads=navigator.getGamepads?[...navigator.getGamepads()].filter(Boolean):[];physicalConnected=pads.length>0;Object.assign(physical,neutral());
+  if(pads.length){
+    const names=[];let axesPad=null;
+    for(const g of pads){
+      names.push(g.id.replace(/\s*\([^)]*vendor[^)]*\)/i,"").slice(0,28));
+      const indices=[0,1,2,3,4,5,6,7,8,9,10,11,16,17],bits=[2,4,1,8,16,32,64,128,256,512,1024,2048,4096,8192];
+      indices.forEach((idx,i)=>{if(pressed(g,idx))physical.buttons|=bits[i]});
+      if(pressed(g,12))physical.hat=0;else if(pressed(g,13))physical.hat=4;else if(pressed(g,14))physical.hat=6;else if(pressed(g,15))physical.hat=2;
+      if(!axesPad&&g.axes.length>=2)axesPad=g;
+    }
+    if(axesPad){const a=axesPad.axes,axis=i=>Math.round(Math.max(-1,Math.min(1,a[i]||0))*127+128);physical.lx=axis(0);physical.ly=axis(1);if(a.length>=4){physical.rx=axis(2);physical.ry=axis(3)}}
+    gpEl.textContent=names.join(" + ");
+  }else gpEl.textContent="touch controls";
+  send();requestAnimationFrame(pollGamepads);
+}
+window.addEventListener("gamepadconnected",()=>send(true));window.addEventListener("gamepaddisconnected",()=>send(true));pollGamepads();setInterval(()=>send(true),250);
+document.getElementById("fullscreen").addEventListener("click",async()=>{
+  try{if(!document.fullscreenElement){await document.documentElement.requestFullscreen?.();await screen.orientation?.lock?.("landscape")}else await document.exitFullscreen?.()}catch(e){}
+  window.scrollTo(0,1);
+});
+document.addEventListener("contextmenu",e=>e.preventDefault());
 </script>
 </body>
 </html>

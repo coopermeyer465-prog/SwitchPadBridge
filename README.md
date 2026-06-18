@@ -14,7 +14,7 @@ iPhone, iPad, or paired Bluetooth controller
        Nintendo Switch / Switch 2
 ```
 
-The ESP32 hosts a touch gamepad at `http://switchpad.local/`. The page can also read a PlayStation, Xbox, or other controller paired with the iPhone or iPad through the browser Gamepad API. Input is forwarded over Wi-Fi and emitted through the ESP32-S3 native USB interface.
+The ESP32 hosts a fullscreen, responsive touch gamepad at `http://switchpad.local/`. The page can also read a PlayStation, Xbox, Joy-Con, or other OS-supported standard controller paired with the iPhone or iPad through the browser Gamepad API. Input is forwarded over Wi-Fi and emitted through the ESP32-S3 native USB interface.
 
 > [!IMPORTANT]
 > This is prototype firmware. Its USB profile emulates a HORI Pokken wired controller, a known target for original Switch projects. Switch 2 acceptance must still be tested on real hardware.
@@ -25,8 +25,11 @@ The simplest setup needs no separate virtual-gamepad app:
 
 1. Connect the iPhone or iPad to the same Wi-Fi as the ESP32.
 2. Open `http://switchpad.local/` in Safari. If mDNS does not resolve, use the IP printed in the serial monitor.
-3. Use the on-screen controls, or pair a physical controller in iOS/iPadOS Bluetooth settings and press a button while the page is open.
-4. Keep Safari in the foreground. iOS and iPadOS may suspend the page and its WebSocket when you switch to another app or lock the device.
+3. Rotate to landscape for the widest thumb spacing, then tap the fullscreen icon. On iPhone, Safari may require adding the page to the Home Screen for a completely chrome-free view.
+4. Use the on-screen controls, or pair a physical controller in iOS/iPadOS Bluetooth settings and press a button while the page is open.
+5. Keep Safari in the foreground. iOS and iPadOS may suspend the page and its WebSocket when you switch to another app or lock the device.
+
+The layout responds to phone/iPad size and orientation. Touch and physical-controller state are merged, so either input method can be used without changing modes. Controller compatibility still depends on iOS/iPadOS and Safari exposing that device through the standard Gamepad API; unusual generic pads may use a nonstandard button order.
 
 A separate app only works if it sends input directly to the ESP32. The firmware currently accepts its compact input format over UDP port `7777`; OSC apps such as TouchOSC would require a small OSC parser or a custom bridge.
 
