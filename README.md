@@ -14,7 +14,7 @@ iPhone, iPad, or paired Bluetooth controller
        Nintendo Switch / Switch 2
 ```
 
-The ESP32 hosts a responsive touch gamepad at `http://switchpad.local/`. The page can also read a PlayStation, Xbox, Joy-Con, Backbone, or other OS-supported standard controller paired with or connected to the iPhone or iPad through the browser Gamepad API. Input is forwarded over Wi-Fi and emitted through the ESP32-S3 native USB interface.
+The ESP32 hosts a responsive touch gamepad at `http://192.168.0.107/` (and `http://switchpad.local/` where mDNS works). The page can also read a PlayStation, Xbox, Joy-Con, Backbone, or other OS-supported standard controller paired with or connected to the iPhone or iPad through the browser Gamepad API. Input is forwarded over Wi-Fi and emitted through the ESP32-S3 native USB interface.
 
 > [!IMPORTANT]
 > This is prototype firmware. Its USB profile emulates a HORI Pokken wired controller, a known target for original Switch projects. Switch 2 acceptance must still be tested on real hardware.
@@ -24,7 +24,7 @@ The ESP32 hosts a responsive touch gamepad at `http://switchpad.local/`. The pag
 The simplest setup needs no separate virtual-gamepad app:
 
 1. Connect the iPhone or iPad to the same Wi-Fi as the ESP32.
-2. Open `http://switchpad.local/` in Safari. If mDNS does not resolve, use the IP printed in the serial monitor.
+2. Open `http://192.168.0.107/` in Safari. `http://switchpad.local/` is also available when mDNS resolves correctly.
 3. Rotate to landscape for the widest thumb spacing. Touch and drag anywhere unused on the left or right half to place and operate that side's floating analog stick.
 4. Use the on-screen controls, or pair a physical controller in iOS/iPadOS Bluetooth settings and press a button while the page is open.
 5. Keep Safari in the foreground. iOS and iPadOS may suspend the page and its connection when you switch to another app or lock the device.

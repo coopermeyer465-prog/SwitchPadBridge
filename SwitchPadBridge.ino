@@ -23,6 +23,9 @@ static const uint8_t CONTROLLER_COUNT = 1;
 static const uint32_t REPORT_INTERVAL_US = 4000;
 static const uint32_t INPUT_TIMEOUT_MS = 800;
 static const uint32_t WS_READ_TIMEOUT_MS = 500;
+static const IPAddress STATIC_IP(192, 168, 0, 107);
+static const IPAddress GATEWAY_IP(192, 168, 0, 1);
+static const IPAddress SUBNET_MASK(255, 255, 255, 0);
 
 enum SwitchButton : uint16_t {
   SW_Y = 0x0001,
@@ -597,6 +600,9 @@ bool connectWifi() {
 
   WiFi.mode(WIFI_STA);
   WiFi.setSleep(false);
+  if (!WiFi.config(STATIC_IP, GATEWAY_IP, SUBNET_MASK, GATEWAY_IP)) {
+    Serial.println("Static IP configuration failed.");
+  }
   WiFi.begin(ssid.c_str(), password.c_str());
   Serial.print("Joining Wi-Fi");
   uint32_t start = millis();
