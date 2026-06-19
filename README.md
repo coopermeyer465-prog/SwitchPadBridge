@@ -33,6 +33,12 @@ The layout responds to phone/iPad size and orientation. Touch and physical-contr
 
 Tap the pencil in the lower-right corner to edit the layout. Drag the center buttons, shoulder groups, D-pad, or face-button group; Reset restores defaults, Cancel discards the current edit, and Save stores separate portrait and landscape layouts locally on that device.
 
+## Four-player experiment
+
+Up to four phones can keep simultaneous connections to the ESP32. Tap the `P1` button in the lower-left corner to cycle that device through P1-P4; the selection is remembered locally. Give each phone a different player number.
+
+The USB descriptor exposes four top-level gamepad collections using HID report IDs 1-4. This is the closest four-controller experiment supported by the stock Arduino ESP32 USB stack, but all four collections still share one HID interface and one USB device address. A physical USB hub gives every attached controller a separate address, so the Switch may still recognize this build as one controller or reject the modified Pokken descriptor. Real Switch hardware is the deciding test.
+
 A separate app only works if it sends input directly to the ESP32. The firmware currently accepts its compact input format over UDP port `7777`; OSC apps such as TouchOSC would require a small OSC parser or a custom bridge.
 
 ## Build and Flash
@@ -61,7 +67,7 @@ If no credentials are compiled in or saved, the ESP32 creates the open setup net
 Every transport accepts the same URL-encoded payload:
 
 ```text
-buttons=0x0004&hat=8&lx=128&ly=128&rx=128&ry=128
+player=0&buttons=0x0004&hat=8&lx=128&ly=128&rx=128&ry=128
 ```
 
 - WebSocket: `ws://<esp32-ip>:81/ws`
@@ -70,7 +76,7 @@ buttons=0x0004&hat=8&lx=128&ly=128&rx=128&ry=128
 - State: `GET http://<esp32-ip>/api/state`
 - Health check: `GET http://<esp32-ip>/health`
 
-Stick values are `0..255`, centered at `128`. Hat values are `0..7`, with `8` neutral. Button bits are defined in `SwitchButton` near the top of the sketch.
+Players are numbered `0..3` in the API and displayed as P1-P4. Stick values are `0..255`, centered at `128`. Hat values are `0..7`, with `8` neutral. Button bits are defined in `SwitchButton` near the top of the sketch.
 
 ## Troubleshooting
 

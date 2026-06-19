@@ -19,7 +19,8 @@
 static const uint16_t HTTP_PORT = 80;
 static const uint16_t UDP_PORT = 7777;
 static const uint16_t WS_PORT = 81;
-static const uint32_t REPORT_INTERVAL_US = 5000;
+static const uint8_t CONTROLLER_COUNT = 4;
+static const uint32_t REPORT_INTERVAL_US = 4000;
 static const uint32_t INPUT_TIMEOUT_MS = 800;
 static const uint32_t WS_READ_TIMEOUT_MS = 500;
 
@@ -60,8 +61,8 @@ public:
     hid.begin();
   }
 
-  bool send(const SwitchReport &report) {
-    return hid.SendReport(0, &report, sizeof(report), 2);
+  bool send(uint8_t player, const SwitchReport &report) {
+    return hid.SendReport(player + 1, &report, sizeof(report), 2);
   }
 
   uint16_t _onGetDescriptor(uint8_t *buffer) override {
@@ -78,49 +79,27 @@ public:
 private:
   USBHID hid;
 
+  // Four top-level collections share one USB HID interface and use report IDs 1-4.
+  #define SWITCH_GAMEPAD_REPORT(ID) \
+    0x05, 0x01, 0x09, 0x05, 0xA1, 0x01, 0x85, ID, \
+    0x15, 0x00, 0x25, 0x01, 0x35, 0x00, 0x45, 0x01, \
+    0x75, 0x01, 0x95, 0x10, 0x05, 0x09, 0x19, 0x01, \
+    0x29, 0x10, 0x81, 0x02, 0x05, 0x01, 0x25, 0x07, \
+    0x46, 0x3B, 0x01, 0x75, 0x04, 0x95, 0x01, 0x65, 0x14, \
+    0x09, 0x39, 0x81, 0x42, 0x65, 0x00, 0x95, 0x01, 0x81, 0x01, \
+    0x26, 0xFF, 0x00, 0x46, 0xFF, 0x00, 0x09, 0x30, 0x09, 0x31, \
+    0x09, 0x32, 0x09, 0x35, 0x75, 0x08, 0x95, 0x04, 0x81, 0x02, \
+    0x06, 0x00, 0xFF, 0x09, 0x20, 0x95, 0x01, 0x81, 0x02, \
+    0x0A, 0x21, 0x26, 0x95, 0x08, 0x91, 0x02, 0xC0
+
   static constexpr uint8_t reportDescriptor[] = {
-    0x05, 0x01,        // Usage Page (Generic Desktop)
-    0x09, 0x05,        // Usage (Joystick)
-    0xA1, 0x01,        // Collection (Application)
-    0x15, 0x00,        // Logical Minimum (0)
-    0x25, 0x01,        // Logical Maximum (1)
-    0x35, 0x00,        // Physical Minimum (0)
-    0x45, 0x01,        // Physical Maximum (1)
-    0x75, 0x01,        // Report Size (1)
-    0x95, 0x10,        // Report Count (16)
-    0x05, 0x09,        // Usage Page (Button)
-    0x19, 0x01,        // Usage Minimum (1)
-    0x29, 0x10,        // Usage Maximum (16)
-    0x81, 0x02,        // Input (Data, Variable, Absolute)
-    0x05, 0x01,        // Usage Page (Generic Desktop)
-    0x25, 0x07,        // Logical Maximum (7)
-    0x46, 0x3B, 0x01,  // Physical Maximum (315)
-    0x75, 0x04,        // Report Size (4)
-    0x95, 0x01,        // Report Count (1)
-    0x65, 0x14,        // Unit (English Rotation, degrees)
-    0x09, 0x39,        // Usage (Hat switch)
-    0x81, 0x42,        // Input (Data, Variable, Absolute, Null State)
-    0x65, 0x00,        // Unit (None)
-    0x95, 0x01,        // Report Count (1)
-    0x81, 0x01,        // Input (Constant)
-    0x26, 0xFF, 0x00,  // Logical Maximum (255)
-    0x46, 0xFF, 0x00,  // Physical Maximum (255)
-    0x09, 0x30,        // Usage (X)
-    0x09, 0x31,        // Usage (Y)
-    0x09, 0x32,        // Usage (Z)
-    0x09, 0x35,        // Usage (Rz)
-    0x75, 0x08,        // Report Size (8)
-    0x95, 0x04,        // Report Count (4)
-    0x81, 0x02,        // Input (Data, Variable, Absolute)
-    0x06, 0x00, 0xFF,  // Usage Page (Vendor Defined)
-    0x09, 0x20,        // Usage (0x20)
-    0x95, 0x01,        // Report Count (1)
-    0x81, 0x02,        // Input (Data, Variable, Absolute)
-    0x0A, 0x21, 0x26,  // Usage (0x2621)
-    0x95, 0x08,        // Report Count (8)
-    0x91, 0x02,        // Output (Data, Variable, Absolute)
-    0xC0               // End Collection
+    SWITCH_GAMEPAD_REPORT(1),
+    SWITCH_GAMEPAD_REPORT(2),
+    SWITCH_GAMEPAD_REPORT(3),
+    SWITCH_GAMEPAD_REPORT(4)
   };
+
+  #undef SWITCH_GAMEPAD_REPORT
 };
 
 constexpr uint8_t SwitchHID_::reportDescriptor[];
@@ -128,13 +107,14 @@ constexpr uint8_t SwitchHID_::reportDescriptor[];
 SwitchHID_ SwitchHID;
 WebServer server(HTTP_PORT);
 WiFiServer wsServer(WS_PORT);
-WiFiClient wsClient;
+WiFiClient wsClients[CONTROLLER_COUNT];
 WiFiUDP udp;
 Preferences prefs;
 
-SwitchReport currentReport = {0, 8, 128, 128, 128, 128, 0};
-uint32_t lastInputMs = 0;
+SwitchReport currentReports[CONTROLLER_COUNT];
+uint32_t lastInputMs[CONTROLLER_COUNT] = {0};
 uint32_t lastReportUs = 0;
+uint8_t nextReportPlayer = 0;
 uint32_t packetsSeen = 0;
 
 const char INDEX_HTML[] PROGMEM = R"HTML(
@@ -179,6 +159,7 @@ button{font:inherit;color:inherit;touch-action:none;cursor:pointer}
 .layout-tools{position:fixed;z-index:12;right:max(10px,env(safe-area-inset-right));bottom:max(10px,env(safe-area-inset-bottom));display:flex;gap:7px}
 .layout-tools button{position:relative;width:38px;height:38px;display:grid;place-items:center;border:1px solid #4b5561;border-radius:7px;background:#20262d;box-shadow:0 4px 10px #0008}
 .layout-tools svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.player-select{position:fixed;z-index:12;left:max(10px,env(safe-area-inset-left));bottom:max(10px,env(safe-area-inset-bottom));width:44px;height:38px;border:1px solid #4b5561;border-radius:7px;background:#20262d;box-shadow:0 4px 10px #0008;font-weight:800}
 .edit-actions{display:none;gap:7px}.editing .edit-actions{display:flex}.editing #editLayout{display:none}
 .editing [data-move]{outline:1px dashed #24d6cf;outline-offset:5px;cursor:move}.editing button[data-bit],.editing button[data-dir]{pointer-events:none}
 button.down,button:active{background:#3b4652!important;box-shadow:inset 0 2px 7px #000b!important;transform:translateY(1px)}
@@ -219,6 +200,7 @@ button.down,button:active{background:#3b4652!important;box-shadow:inset 0 2px 7p
   </section>
   <div class="statusbar connection"><span id="dot" class="dot"></span><span id="status">connecting</span></div>
   <div id="gp" class="statusbar physical">touch controls</div>
+  <button id="playerSelect" class="player-select" aria-label="Select player" title="Select player">P1</button>
   <div class="layout-tools">
     <button id="editLayout" aria-label="Edit layout" title="Edit layout"><svg viewBox="0 0 24 24"><path d="M21.2 6.8a2.1 2.1 0 0 0-4-4L3.8 16.2a2 2 0 0 0-.5.8L2 21.4a.5.5 0 0 0 .6.6L7 20.7a2 2 0 0 0 .8-.5z"/><path d="m15 5 4 4"/></svg></button>
     <div class="edit-actions">
@@ -234,7 +216,12 @@ const touch=neutral(), physical=neutral();
 const activeSticks={lx:false,rx:false};
 const dirs=new Set();
 let ws,connected=false,lastSent="",physicalConnected=false,wsFailures=0,useHttp=false,httpBusy=false,editing=false;
+let player=Math.max(0,Math.min(3,Number(localStorage.getItem("switchpad-player")||0)));
 const dot=document.getElementById("dot"),statusEl=document.getElementById("status"),gpEl=document.getElementById("gp");
+const playerSelect=document.getElementById("playerSelect");
+function showPlayer(){playerSelect.textContent=`P${player+1}`;playerSelect.title=`Controller ${player+1}`}
+showPlayer();
+playerSelect.addEventListener("click",()=>{player=(player+1)%4;localStorage.setItem("switchpad-player",String(player));lastSent="";showPlayer();send(true)});
 function connect(){
   if(useHttp)return;
   ws=new WebSocket(`ws://${location.hostname}:81/ws`);
@@ -249,7 +236,7 @@ function merged(){
     rx:activeSticks.rx?touch.rx:physicalConnected?physical.rx:touch.rx,
     ry:activeSticks.rx?touch.ry:physicalConnected?physical.ry:touch.ry};
 }
-function payload(){const s=merged();return `buttons=${s.buttons}&hat=${s.hat}&lx=${s.lx}&ly=${s.ly}&rx=${s.rx}&ry=${s.ry}`}
+function payload(){const s=merged();return `player=${player}&buttons=${s.buttons}&hat=${s.hat}&lx=${s.lx}&ly=${s.ly}&rx=${s.rx}&ry=${s.ry}`}
 function send(force=false){
   const p=payload();if(!force&&p===lastSent)return;
   if(connected&&ws?.readyState===WebSocket.OPEN){ws.send(p);lastSent=p;return}
@@ -386,8 +373,11 @@ uint8_t clampByte(uint32_t value) {
 }
 
 void applyInput(const String &body) {
+  uint8_t player = (uint8_t)parseNumber(getParam(body, "player"), 0);
+  if (player >= CONTROLLER_COUNT) return;
+
   noInterrupts();
-  SwitchReport next = currentReport;
+  SwitchReport next = currentReports[player];
   interrupts();
 
   next.buttons = (uint16_t)parseNumber(getParam(body, "buttons"), next.buttons);
@@ -400,23 +390,15 @@ void applyInput(const String &body) {
   next.vendor = 0;
 
   noInterrupts();
-  currentReport = next;
+  currentReports[player] = next;
   interrupts();
-  lastInputMs = millis();
+  lastInputMs[player] = millis();
   packetsSeen++;
 }
 
 String stateJson() {
-  noInterrupts();
-  SwitchReport r = currentReport;
-  interrupts();
   String out = "{";
-  out += "\"buttons\":" + String(r.buttons) + ",";
-  out += "\"hat\":" + String(r.hat) + ",";
-  out += "\"lx\":" + String(r.lx) + ",";
-  out += "\"ly\":" + String(r.ly) + ",";
-  out += "\"rx\":" + String(r.rx) + ",";
-  out += "\"ry\":" + String(r.ry) + ",";
+  out += "\"controllers\":" + String(CONTROLLER_COUNT) + ",";
   out += "\"packets\":" + String(packetsSeen) + ",";
   out += "\"ip\":\"" + WiFi.localIP().toString() + "\"";
   out += "}";
@@ -505,80 +487,93 @@ void handleWsHandshake(WiFiClient &client) {
   client.stop();
 }
 
-bool waitForWsBytes(size_t count) {
+bool waitForWsBytes(WiFiClient &client, size_t count) {
   uint32_t start = millis();
-  while (wsClient.connected() && wsClient.available() < (int)count) {
+  while (client.connected() && client.available() < (int)count) {
     if (millis() - start >= WS_READ_TIMEOUT_MS) return false;
     delay(1);
   }
-  return wsClient.connected() && wsClient.available() >= (int)count;
+  return client.connected() && client.available() >= (int)count;
 }
 
-void sendWsControlFrame(uint8_t opcode, const uint8_t *payload, size_t len) {
-  if (!wsClient.connected() || len > 125) return;
+void sendWsControlFrame(WiFiClient &client, uint8_t opcode, const uint8_t *payload, size_t len) {
+  if (!client.connected() || len > 125) return;
   uint8_t header[2] = {(uint8_t)(0x80 | opcode), (uint8_t)len};
-  wsClient.write(header, sizeof(header));
-  if (len) wsClient.write(payload, len);
+  client.write(header, sizeof(header));
+  if (len) client.write(payload, len);
 }
 
-void pollWebSocket() {
-  WiFiClient next = wsServer.available();
-  if (next) {
-    if (wsClient && wsClient.connected()) wsClient.stop();
-    wsClient = next;
-    handleWsHandshake(wsClient);
-  }
+void pollWsClient(WiFiClient &client) {
+  if (!client || !client.connected() || client.available() < 2) return;
 
-  if (!wsClient || !wsClient.connected() || wsClient.available() < 2) return;
-
-  uint8_t b0 = wsClient.read();
-  uint8_t b1 = wsClient.read();
+  uint8_t b0 = client.read();
+  uint8_t b1 = client.read();
   uint8_t opcode = b0 & 0x0F;
   bool masked = b1 & 0x80;
   uint64_t len = b1 & 0x7F;
 
   if (len == 126) {
-    if (!waitForWsBytes(2)) {
-      wsClient.stop();
+    if (!waitForWsBytes(client, 2)) {
+      client.stop();
       return;
     }
-    len = ((uint16_t)wsClient.read() << 8) | wsClient.read();
+    len = ((uint16_t)client.read() << 8) | client.read();
   } else if (len == 127) {
-    wsClient.stop();
+    client.stop();
     return;
   }
 
   if (!masked || len > 512) {
-    wsClient.stop();
+    client.stop();
     return;
   }
 
   uint8_t mask[4] = {0, 0, 0, 0};
-  if (!waitForWsBytes(4)) {
-    wsClient.stop();
+  if (!waitForWsBytes(client, 4)) {
+    client.stop();
     return;
   }
-  for (int i = 0; i < 4; i++) mask[i] = wsClient.read();
+  for (int i = 0; i < 4; i++) mask[i] = client.read();
 
   String msg = "";
   msg.reserve((size_t)len);
   for (uint64_t i = 0; i < len; i++) {
-    if (!waitForWsBytes(1)) {
-      wsClient.stop();
+    if (!waitForWsBytes(client, 1)) {
+      client.stop();
       return;
     }
-    char c = wsClient.read();
+    char c = client.read();
     c ^= mask[i & 3];
     msg += c;
   }
 
   if (opcode == 0x8) {
-    wsClient.stop();
+    client.stop();
   } else if (opcode == 0x9) {
-    sendWsControlFrame(0xA, (const uint8_t *)msg.c_str(), msg.length());
+    sendWsControlFrame(client, 0xA, (const uint8_t *)msg.c_str(), msg.length());
   } else if (opcode == 0x1 && msg.length()) {
     applyInput(msg);
   }
+}
+
+void pollWebSocket() {
+  WiFiClient next = wsServer.available();
+  if (next) {
+    int slot = -1;
+    for (uint8_t i = 0; i < CONTROLLER_COUNT; i++) {
+      if (!wsClients[i] || !wsClients[i].connected()) {
+        slot = i;
+        break;
+      }
+    }
+    if (slot >= 0) {
+      wsClients[slot] = next;
+      handleWsHandshake(wsClients[slot]);
+    } else {
+      next.stop();
+    }
+  }
+  for (uint8_t i = 0; i < CONTROLLER_COUNT; i++) pollWsClient(wsClients[i]);
 }
 
 void pollUdp() {
@@ -656,6 +651,10 @@ void setupUsb() {
 void setup() {
   Serial.begin(115200);
   delay(500);
+  for (uint8_t i = 0; i < CONTROLLER_COUNT; i++) {
+    currentReports[i] = {0, 8, 128, 128, 128, 128, 0};
+    lastInputMs[i] = millis();
+  }
   if (!connectWifi()) {
     startSetupAccessPoint();
   }
@@ -663,7 +662,6 @@ void setup() {
   wsServer.begin();
   udp.begin(UDP_PORT);
   setupUsb();
-  lastInputMs = millis();
   Serial.println("Open the controller page on your phone:");
   Serial.print("http://");
   Serial.println(WiFi.localIP());
@@ -674,18 +672,21 @@ void loop() {
   pollWebSocket();
   pollUdp();
 
-  if (millis() - lastInputMs > INPUT_TIMEOUT_MS) {
-    noInterrupts();
-    currentReport = {0, 8, 128, 128, 128, 128, 0};
-    interrupts();
+  for (uint8_t i = 0; i < CONTROLLER_COUNT; i++) {
+    if (millis() - lastInputMs[i] > INPUT_TIMEOUT_MS) {
+      noInterrupts();
+      currentReports[i] = {0, 8, 128, 128, 128, 128, 0};
+      interrupts();
+    }
   }
 
   uint32_t now = micros();
   if (now - lastReportUs >= REPORT_INTERVAL_US) {
     lastReportUs = now;
     noInterrupts();
-    SwitchReport report = currentReport;
+    SwitchReport report = currentReports[nextReportPlayer];
     interrupts();
-    SwitchHID.send(report);
+    SwitchHID.send(nextReportPlayer, report);
+    nextReportPlayer = (nextReportPlayer + 1) % CONTROLLER_COUNT;
   }
 }
