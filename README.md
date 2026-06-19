@@ -43,7 +43,7 @@ A separate app only works if it sends input directly to the ESP32. The firmware 
 
 On a computer, click the fullscreen icon in the lower-left corner to enter desktop controller mode. The page uses pointer lock so mouse motion drives the right stick and automatically springs back to center. Press Escape to release the mouse and leave fullscreen.
 
-While editing on a computer, use the keyboard icon to change every key binding, assign left and right mouse clicks, choose which stick mouse movement controls, and adjust mouse sensitivity. These mappings are saved locally on that computer. On-screen controls require a completed mouse click on computers; touch controls still respond immediately to touch-down for gameplay.
+While editing on a computer, use the keyboard icon to change every key binding, assign left and right mouse clicks, choose which stick mouse movement controls, and adjust mouse sensitivity. These mappings are saved locally on that computer. Desktop input highlights its mapped on-screen buttons, and the fixed stick graphics mirror WASD and mouse movement. On-screen controls respond immediately to mouse-down while still supporting completed and keyboard-generated clicks; touch controls respond immediately to touch-down for gameplay.
 
 | Input | Switch control |
 | --- | --- |

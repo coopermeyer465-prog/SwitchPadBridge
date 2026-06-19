@@ -135,6 +135,7 @@ button{font:inherit;color:inherit;touch-action:none;cursor:pointer}
 .utility{position:absolute;z-index:5;top:max(14px,env(safe-area-inset-top));left:50%;display:flex;gap:clamp(8px,1.4vw,18px);transform:translateX(-50%)}
 .utility button,.shoulders button{border:1px solid #4b5561;background:#242a31;box-shadow:0 5px 12px #0008,inset 0 1px #ffffff12;font-weight:750}
 .utility button{position:relative;width:clamp(44px,5.2vw,62px);height:clamp(38px,5vw,54px);border-radius:7px;font-size:clamp(14px,1.5vw,18px)}
+.utility button svg{width:58%;height:58%;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .shoulders{position:absolute;z-index:3;top:max(14px,env(safe-area-inset-top));display:flex;flex-direction:column;gap:6px}
 .left .shoulders{left:max(14px,env(safe-area-inset-left))}.right .shoulders{right:max(14px,env(safe-area-inset-right))}
 .shoulders button{position:relative;width:clamp(64px,8vw,112px);height:clamp(34px,4.2vw,48px);border-radius:7px;font-size:clamp(14px,1.7vw,20px)}
@@ -154,7 +155,7 @@ button{font:inherit;color:inherit;touch-action:none;cursor:pointer}
 .dpad:after{content:"";position:absolute;pointer-events:none;left:38%;top:38%;width:24%;height:24%;border-radius:50%;background:#2a3037}
 .statusbar{position:absolute;z-index:6;display:flex;align-items:center;gap:10px;color:#9ca8b5;font-size:12px}
 .statusbar.connection{top:max(74px,calc(env(safe-area-inset-top) + 62px));left:50%;transform:translateX(-50%)}
-.statusbar.physical{top:auto;bottom:max(10px,env(safe-area-inset-bottom));left:50%;right:auto;transform:translateX(-50%);max-width:34%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.statusbar.physical{display:none}
 .dot{width:9px;height:9px;flex:none;border-radius:50%;background:#e05555;box-shadow:0 0 0 3px #e0555525}.dot.ok{background:#24d6cf;box-shadow:0 0 0 3px #24d6cf28}
 .layout-tools{position:fixed;z-index:12;right:max(10px,env(safe-area-inset-right));bottom:max(10px,env(safe-area-inset-bottom));display:flex;gap:7px}
 .layout-tools button{position:relative;width:38px;height:38px;display:grid;place-items:center;border:1px solid #4b5561;border-radius:7px;background:#20262d;box-shadow:0 4px 10px #0008}
@@ -168,16 +169,18 @@ button{font:inherit;color:inherit;touch-action:none;cursor:pointer}
 .edit-actions{display:none;gap:7px}.editing .edit-actions{display:flex}.editing #editLayout{display:none}
 .editing [data-move]{outline:1px dashed #24d6cf;outline-offset:5px;cursor:move}.editing [data-move].selected{outline:2px solid #f5f7fa;outline-offset:6px}
 .resize-handle{display:none;position:fixed;z-index:30;width:30px;height:30px;border:2px solid #0b0e12;border-radius:50%;background:#24d6cf;box-shadow:0 3px 9px #000b;touch-action:none;cursor:nwse-resize}.editing .resize-handle.active{display:block}
-button.down,button:active{background:#3b4652!important;box-shadow:inset 0 2px 7px #000b!important;transform:translateY(1px)}
-.face button.down,.face button:active{transform:translateY(-50%) scale(.96)}#bX.down,#bX:active,#bB.down,#bB:active{transform:translateX(-50%) scale(.96)}
+button.down,button.desktop-lit,button:active{background:#3b4652!important;box-shadow:inset 0 2px 7px #000b!important;transform:translateY(1px)}
+.face button.down,.face button.desktop-lit,.face button:active{transform:translateY(-50%) scale(.96)}#bX.down,#bX.desktop-lit,#bX:active,#bB.down,#bB.desktop-lit,#bB:active{transform:translateX(-50%) scale(.96)}
 .editing #bX:active,.editing #bB:active{transform:translateX(-50%)}.editing #bY:active,.editing #bA:active{transform:translateY(-50%)}
 .stick-indicator{display:none;position:absolute;z-index:8;width:clamp(92px,13vw,146px);aspect-ratio:1;place-items:center;border:2px dashed #24d6cf;border-radius:50%;background:#0b0e1266;color:#24d6cf;font-weight:850;font-size:24px;pointer-events:none}.editing .stick-indicator{display:grid}#leftStickIndicator{left:max(5vw,env(safe-area-inset-left));top:27%}#rightStickIndicator{right:max(6vw,env(safe-area-inset-right));bottom:7%}
+.desktop-mode .stick{opacity:1}.desktop-mode #stickL{left:12%!important;top:42%!important}.desktop-mode #stickR{left:88%!important;top:78%!important}.desktop-mode .stick.desktop-click{border-color:#24d6cf;box-shadow:0 0 0 4px #24d6cf35,0 8px 20px #0009,inset 0 0 0 10px #222830}
 .keymap-panel{display:none;position:fixed;z-index:40;inset:7vh max(18px,calc((100vw - 680px)/2));overflow:auto;border:1px solid #4b5561;border-radius:8px;background:#11161cfa;box-shadow:0 18px 50px #000d;padding:16px;touch-action:auto}.keymap-panel.open{display:block}.keymap-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}.keymap-header strong{font-size:17px}.keymap-header button,.keymap-footer button{width:38px;height:38px;border:1px solid #4b5561;border-radius:7px;background:#20262d}.keymap-footer svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}.keymap-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 14px}.keymap-row{display:grid;grid-template-columns:1fr minmax(110px,150px);align-items:center;gap:10px;min-height:38px;color:#c8d0d9;font-size:13px}.keymap-row button,.keymap-row select{height:34px;min-width:0;border:1px solid #4b5561;border-radius:6px;background:#20262d;color:#f5f7fa;padding:0 8px}.keymap-row input{width:100%}.keymap-footer{display:flex;justify-content:flex-end;margin-top:14px}.capturing{border-color:#24d6cf!important;color:#24d6cf!important}
 @media(hover:hover) and (pointer:fine){.desktop-mode-button{display:grid}.editing .desktop-map-only{display:grid!important}}
 @media(orientation:portrait){
  .side{top:76px;width:50%;min-width:0}.utility{top:max(12px,env(safe-area-inset-top));gap:7px}.utility button{width:42px;height:40px;font-size:13px}.statusbar.connection{display:none}
  .shoulders{top:10px;gap:5px}.shoulders button{width:clamp(58px,17vw,92px);height:34px;font-size:13px}.left .shoulders{left:8px}.right .shoulders{right:8px}
  .stick{width:clamp(104px,34vw,164px)}
+ .desktop-mode #stickL{left:25%!important;top:29%!important}.desktop-mode #stickR{left:75%!important;top:74%!important}
  #leftStickIndicator{left:50%;top:13%;transform:translateX(-50%)}#rightStickIndicator{right:50%;bottom:7%;transform:translateX(50%)}
  .dpad{left:50%;bottom:8%;width:clamp(122px,38vw,174px);transform:translateX(-50%)}.face{right:50%;top:18%;width:clamp(142px,40vw,188px);transform:translateX(50%)}
  .statusbar.physical{max-width:76%;font-size:11px}
@@ -197,8 +200,8 @@ button.down,button:active{background:#3b4652!important;box-shadow:inset 0 2px 7p
 <main class="gamepad">
   <div class="utility" data-move="utility">
     <button data-bit="256" data-move="button-minus" aria-label="Minus">-</button>
-    <button data-bit="4096" data-move="button-home" aria-label="Home">HOME</button>
-    <button data-bit="8192" data-move="button-capture" aria-label="Capture">CAP</button>
+    <button data-bit="4096" data-move="button-home" aria-label="Home"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m7.5 11.5 4.5-4 4.5 4V17h-3v-3h-3v3h-3z"/></svg></button>
+    <button data-bit="8192" data-move="button-capture" aria-label="Capture"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="1.5"/><circle cx="12" cy="12" r="5" fill="currentColor" stroke="none"/></svg></button>
     <button data-bit="512" data-move="button-plus" aria-label="Plus">+</button>
   </div>
   <section class="side left" aria-label="Left controls">
@@ -306,12 +309,24 @@ function renderKeymap(){
 }
 loadDesktopMapping();
 function pointerLocked(){return (document.pointerLockElement||document.webkitPointerLockElement)===gamepadEl}
+function syncDesktopVisuals(){
+  const active=desktopMode;
+  for(const button of document.querySelectorAll("button[data-bit]"))button.classList.toggle("desktop-lit",active&&!!(desktop.buttons&Number(button.dataset.bit)));
+  const hats={up:[0,1,7],right:[1,2,3],down:[3,4,5],left:[5,6,7]};
+  for(const button of document.querySelectorAll("button[data-dir]"))button.classList.toggle("desktop-lit",active&&hats[button.dataset.dir].includes(desktop.hat));
+  for(const [id,x,y,bit] of [["stickL","lx","ly",1024],["stickR","rx","ry",2048]]){
+    const stick=document.getElementById(id),nub=stick.querySelector(".nub"),max=stick.getBoundingClientRect().width*.31;
+    const dx=(desktop[x]-128)/127*max,dy=(desktop[y]-128)/127*max;
+    nub.style.transform=active?`translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px))`:"translate(-50%,-50%)";
+    stick.classList.toggle("desktop-click",active&&!!(desktop.buttons&bit));
+  }
+}
 function updateDesktopInput(){
   let buttons=0;for(const [id,bit] of Object.entries(actionBits))if(desktopKeys.has(desktopMapping.keys[id]))buttons|=bit;if(desktopMouseButtons.has(0))buttons|=actionBits[desktopMapping.mouseLeft]||0;if(desktopMouseButtons.has(2))buttons|=actionBits[desktopMapping.mouseRight]||0;desktop.buttons=buttons;
   const left=desktopKeys.has(desktopMapping.keys.leftLeft),right=desktopKeys.has(desktopMapping.keys.leftRight),up=desktopKeys.has(desktopMapping.keys.leftUp),down=desktopKeys.has(desktopMapping.keys.leftDown);desktopAxes.lx=left||right||up||down;desktop.lx=128+(right?127:0)-(left?127:0);desktop.ly=128+(down?127:0)-(up?127:0);
-  const du=desktopKeys.has(desktopMapping.keys.dpadUp),dd=desktopKeys.has(desktopMapping.keys.dpadDown),dl=desktopKeys.has(desktopMapping.keys.dpadLeft),dr=desktopKeys.has(desktopMapping.keys.dpadRight);desktop.hat=du&&dr?1:dr&&dd?3:dd&&dl?5:dl&&du?7:du?0:dr?2:dd?4:dl?6:8;send();
+  const du=desktopKeys.has(desktopMapping.keys.dpadUp),dd=desktopKeys.has(desktopMapping.keys.dpadDown),dl=desktopKeys.has(desktopMapping.keys.dpadLeft),dr=desktopKeys.has(desktopMapping.keys.dpadRight);desktop.hat=du&&dr?1:dr&&dd?3:dd&&dl?5:dl&&du?7:du?0:dr?2:dd?4:dl?6:8;syncDesktopVisuals();send();
 }
-function clearDesktopInput(){desktopKeys.clear();desktopMouseButtons.clear();mouseVX=mouseVY=0;Object.assign(desktop,neutral());desktopAxes.lx=desktopAxes.rx=false;send(true)}
+function clearDesktopInput(){desktopKeys.clear();desktopMouseButtons.clear();mouseVX=mouseVY=0;Object.assign(desktop,neutral());desktopAxes.lx=desktopAxes.rx=false;syncDesktopVisuals();send(true)}
 async function enterDesktopMode(){
   if(editing)return;
   try{const requestFullscreen=gamepadEl.requestFullscreen||gamepadEl.webkitRequestFullscreen;if(requestFullscreen){const result=requestFullscreen.call(gamepadEl);if(result&&result.then)await result}desktopMode=true;document.body.classList.add("desktop-mode");const requestLock=gamepadEl.requestPointerLock||gamepadEl.webkitRequestPointerLock;if(requestLock){const result=requestLock.call(gamepadEl);if(result&&result.catch)result.catch(()=>{})}}catch(e){statusEl.textContent="fullscreen unavailable"}
@@ -330,30 +345,32 @@ document.addEventListener("pointerlockchange",()=>{if(!pointerLocked()){
 }});
 document.addEventListener("keydown",e=>{if(captureAction){e.preventDefault();desktopMapping.keys[captureAction]=e.code;captureAction="";saveDesktopMapping();renderKeymap();return}if(!desktopMode||!Object.values(desktopMapping.keys).includes(e.code)||e.target===photoInput)return;e.preventDefault();desktopKeys.add(e.code);updateDesktopInput()});
 document.addEventListener("keyup",e=>{if(!Object.values(desktopMapping.keys).includes(e.code))return;if(desktopMode)e.preventDefault();desktopKeys.delete(e.code);updateDesktopInput()});
-document.addEventListener("mousemove",e=>{if(!desktopMode||!pointerLocked()||desktopMapping.mouseAxis==="off")return;mouseVX=Math.max(-127,Math.min(127,mouseVX+e.movementX*desktopMapping.sensitivity));mouseVY=Math.max(-127,Math.min(127,mouseVY+e.movementY*desktopMapping.sensitivity));const left=desktopMapping.mouseAxis==="left";desktopAxes[left?"lx":"rx"]=true;desktop[left?"lx":"rx"]=Math.round(128+mouseVX);desktop[left?"ly":"ry"]=Math.round(128+mouseVY);send()});
+document.addEventListener("mousemove",e=>{if(!desktopMode||!pointerLocked()||desktopMapping.mouseAxis==="off")return;mouseVX=Math.max(-127,Math.min(127,mouseVX+e.movementX*desktopMapping.sensitivity));mouseVY=Math.max(-127,Math.min(127,mouseVY+e.movementY*desktopMapping.sensitivity));const left=desktopMapping.mouseAxis==="left";desktopAxes[left?"lx":"rx"]=true;desktop[left?"lx":"rx"]=Math.round(128+mouseVX);desktop[left?"ly":"ry"]=Math.round(128+mouseVY);syncDesktopVisuals();send()});
 document.addEventListener("mousedown",e=>{if(!desktopMode||!pointerLocked())return;e.preventDefault();e.stopPropagation();desktopMouseButtons.add(e.button);updateDesktopInput()},true);
 document.addEventListener("mouseup",e=>{if(!desktopMode)return;e.preventDefault();desktopMouseButtons.delete(e.button);updateDesktopInput()},true);
 window.addEventListener("blur",clearDesktopInput);
-function desktopFrame(){const left=desktopMapping.mouseAxis==="left",axis=left?"lx":"rx";if(desktopMode&&pointerLocked()&&desktopAxes[axis]){mouseVX*=.72;mouseVY*=.72;if(Math.abs(mouseVX)<.7)mouseVX=0;if(Math.abs(mouseVY)<.7)mouseVY=0;desktop[axis]=Math.round(128+mouseVX);desktop[left?"ly":"ry"]=Math.round(128+mouseVY);desktopAxes[axis]=mouseVX!==0||mouseVY!==0;send()}requestAnimationFrame(desktopFrame)}desktopFrame();
+function desktopFrame(){const left=desktopMapping.mouseAxis==="left",axis=left?"lx":"rx";if(desktopMode&&pointerLocked()&&desktopAxes[axis]){mouseVX*=.72;mouseVY*=.72;if(Math.abs(mouseVX)<.7)mouseVX=0;if(Math.abs(mouseVY)<.7)mouseVY=0;desktop[axis]=Math.round(128+mouseVX);desktop[left?"ly":"ry"]=Math.round(128+mouseVY);desktopAxes[axis]=mouseVX!==0||mouseVY!==0;syncDesktopVisuals();send()}requestAnimationFrame(desktopFrame)}desktopFrame();
 function pressButton(el,on){
   const bit=Number(el.dataset.bit);touch.buttons=on?touch.buttons|bit:touch.buttons&~bit;el.classList.toggle("down",on);send();
   if(on&&navigator.vibrate)navigator.vibrate(8);
 }
 for(const b of document.querySelectorAll("button[data-bit]")){
-  b.addEventListener("pointerdown",e=>{if(editing||e.pointerType==="mouse")return;e.preventDefault();b.setPointerCapture(e.pointerId);pressButton(b,true)});
-  const off=e=>{if(editing||e.pointerType==="mouse")return;e.preventDefault();pressButton(b,false)};
+  let lastPointer=0;
+  b.addEventListener("pointerdown",e=>{if(editing)return;e.preventDefault();lastPointer=performance.now();b.setPointerCapture(e.pointerId);pressButton(b,true)});
+  const off=e=>{if(editing)return;e.preventDefault();pressButton(b,false)};
   b.addEventListener("pointerup",off);b.addEventListener("pointercancel",off);b.addEventListener("lostpointercapture",()=>pressButton(b,false));
-  b.addEventListener("click",()=>{if(editing||!matchMedia("(hover:hover) and (pointer:fine)").matches)return;pressButton(b,true);setTimeout(()=>pressButton(b,false),85)});
+  b.addEventListener("click",()=>{if(editing||performance.now()-lastPointer<500)return;pressButton(b,true);setTimeout(()=>pressButton(b,false),85)});
 }
 function updateHat(){
   const u=dirs.has("up"),d=dirs.has("down"),l=dirs.has("left"),r=dirs.has("right");
   touch.hat=u&&r?1:r&&d?3:d&&l?5:l&&u?7:u?0:r?2:d?4:l?6:8;send();
 }
 for(const b of document.querySelectorAll("button[data-dir]")){
-  b.addEventListener("pointerdown",e=>{if(editing||e.pointerType==="mouse")return;e.preventDefault();b.setPointerCapture(e.pointerId);dirs.add(b.dataset.dir);b.classList.add("down");updateHat()});
-  const off=e=>{if(editing||e.pointerType==="mouse")return;e.preventDefault();dirs.delete(b.dataset.dir);b.classList.remove("down");updateHat()};
+  let lastPointer=0;
+  b.addEventListener("pointerdown",e=>{if(editing)return;e.preventDefault();lastPointer=performance.now();b.setPointerCapture(e.pointerId);dirs.add(b.dataset.dir);b.classList.add("down");updateHat()});
+  const off=e=>{if(editing)return;e.preventDefault();dirs.delete(b.dataset.dir);b.classList.remove("down");updateHat()};
   b.addEventListener("pointerup",off);b.addEventListener("pointercancel",off);b.addEventListener("lostpointercapture",off);
-  b.addEventListener("click",()=>{if(editing||!matchMedia("(hover:hover) and (pointer:fine)").matches)return;dirs.add(b.dataset.dir);b.classList.add("down");updateHat();setTimeout(()=>{dirs.delete(b.dataset.dir);b.classList.remove("down");updateHat()},85)});
+  b.addEventListener("click",()=>{if(editing||performance.now()-lastPointer<500)return;dirs.add(b.dataset.dir);b.classList.add("down");updateHat();setTimeout(()=>{dirs.delete(b.dataset.dir);b.classList.remove("down");updateHat()},85)});
 }
 for(const zone of document.querySelectorAll(".side")){
   const stick=zone.querySelector(".stick"),nub=stick.querySelector(".nub"),isLeft=zone.classList.contains("left");let pointer=null,baseX=0,baseY=0,x="lx",y="ly";
