@@ -162,6 +162,7 @@ button{font:inherit;color:inherit;touch-action:none;cursor:pointer}
 .layout-tools svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .layout-tools #swapSticks.active{background:#176b69;border-color:#24d6cf}
 .layout-tools #chooseBackground.active{background:#176b69;border-color:#24d6cf}.no-background #removeBackground{display:none}
+.desktop-map-only{display:none!important}
 .desktop-mode-button{display:none;position:fixed;z-index:12;left:10px;bottom:10px;width:42px;height:42px;place-items:center;border:1px solid #4b5561;border-radius:7px;background:#20262d;box-shadow:0 4px 10px #0008}.desktop-mode-button svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}.desktop-mode .desktop-mode-button{background:#176b69;border-color:#24d6cf}.editing .desktop-mode-button{display:none}
 .player-select{display:none}
 .edit-actions{display:none;gap:7px}.editing .edit-actions{display:flex}.editing #editLayout{display:none}
@@ -171,7 +172,8 @@ button.down,button:active{background:#3b4652!important;box-shadow:inset 0 2px 7p
 .face button.down,.face button:active{transform:translateY(-50%) scale(.96)}#bX.down,#bX:active,#bB.down,#bB:active{transform:translateX(-50%) scale(.96)}
 .editing #bX:active,.editing #bB:active{transform:translateX(-50%)}.editing #bY:active,.editing #bA:active{transform:translateY(-50%)}
 .stick-indicator{display:none;position:absolute;z-index:8;width:clamp(92px,13vw,146px);aspect-ratio:1;place-items:center;border:2px dashed #24d6cf;border-radius:50%;background:#0b0e1266;color:#24d6cf;font-weight:850;font-size:24px;pointer-events:none}.editing .stick-indicator{display:grid}#leftStickIndicator{left:max(5vw,env(safe-area-inset-left));top:27%}#rightStickIndicator{right:max(6vw,env(safe-area-inset-right));bottom:7%}
-@media(hover:hover) and (pointer:fine){.desktop-mode-button{display:grid}}
+.keymap-panel{display:none;position:fixed;z-index:40;inset:7vh max(18px,calc((100vw - 680px)/2));overflow:auto;border:1px solid #4b5561;border-radius:8px;background:#11161cfa;box-shadow:0 18px 50px #000d;padding:16px;touch-action:auto}.keymap-panel.open{display:block}.keymap-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}.keymap-header strong{font-size:17px}.keymap-header button,.keymap-footer button{width:38px;height:38px;border:1px solid #4b5561;border-radius:7px;background:#20262d}.keymap-footer svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}.keymap-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 14px}.keymap-row{display:grid;grid-template-columns:1fr minmax(110px,150px);align-items:center;gap:10px;min-height:38px;color:#c8d0d9;font-size:13px}.keymap-row button,.keymap-row select{height:34px;min-width:0;border:1px solid #4b5561;border-radius:6px;background:#20262d;color:#f5f7fa;padding:0 8px}.keymap-row input{width:100%}.keymap-footer{display:flex;justify-content:flex-end;margin-top:14px}.capturing{border-color:#24d6cf!important;color:#24d6cf!important}
+@media(hover:hover) and (pointer:fine){.desktop-mode-button{display:grid}.editing .desktop-map-only{display:grid!important}}
 @media(orientation:portrait){
  .side{top:76px;width:50%;min-width:0}.utility{top:max(12px,env(safe-area-inset-top));gap:7px}.utility button{width:42px;height:40px;font-size:13px}.statusbar.connection{display:none}
  .shoulders{top:10px;gap:5px}.shoulders button{width:clamp(58px,17vw,92px);height:34px;font-size:13px}.left .shoulders{left:8px}.right .shoulders{right:8px}
@@ -223,9 +225,15 @@ button.down,button:active{background:#3b4652!important;box-shadow:inset 0 2px 7p
   <button id="playerSelect" class="player-select" aria-label="Select player" title="Select player">P1</button>
   <div id="resizeHandle" class="resize-handle" aria-label="Resize selected control"></div>
   <input id="backgroundPhoto" type="file" accept="image/*" hidden>
+  <section id="keymapPanel" class="keymap-panel" aria-label="Desktop control mappings">
+    <div class="keymap-header"><strong>Desktop controls</strong><button id="closeKeymap" aria-label="Close mappings">X</button></div>
+    <div id="keymapGrid" class="keymap-grid"></div>
+    <div class="keymap-footer"><button id="resetKeymap" aria-label="Reset desktop mappings" title="Reset mappings"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></button></div>
+  </section>
   <div class="layout-tools">
     <button id="editLayout" aria-label="Edit layout" title="Edit layout"><svg viewBox="0 0 24 24"><path d="M21.2 6.8a2.1 2.1 0 0 0-4-4L3.8 16.2a2 2 0 0 0-.5.8L2 21.4a.5.5 0 0 0 .6.6L7 20.7a2 2 0 0 0 .8-.5z"/><path d="m15 5 4 4"/></svg></button>
     <div class="edit-actions">
+      <button id="editKeymap" class="desktop-map-only" aria-label="Edit keyboard and mouse mappings" title="Desktop mappings"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 9h.01M11 9h.01M15 9h.01M7 13h.01M11 13h.01M15 13h2M7 17h10"/></svg></button>
       <button id="chooseBackground" aria-label="Choose background photo" title="Background photo"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="m21 15-5-5L5 19"/></svg></button>
       <button id="removeBackground" aria-label="Remove background photo" title="Remove background"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 15H6L5 6M10 11v6M14 11v6"/></svg></button>
       <button id="swapSticks" aria-label="Swap analog stick sides" title="Swap sticks"><svg viewBox="0 0 24 24"><path d="M7 7h11l-3-3"/><path d="m18 7-3 3"/><path d="M17 17H6l3 3"/><path d="m6 17 3-3"/></svg></button>
@@ -277,13 +285,31 @@ function send(force=false){
   if(useHttp&&!httpBusy){httpBusy=true;fetch("/api/input",{method:"POST",headers:{"Content-Type":"text/plain"},body:p}).then(r=>{if(!r.ok)throw Error() ;dot.classList.add("ok");statusEl.textContent="connected";lastSent=p}).catch(()=>{dot.classList.remove("ok");statusEl.textContent="reconnecting"}).finally(()=>httpBusy=false)}
 }
 const desktopButton=document.getElementById("desktopMode");
-const desktopKeyBits={Space:4,KeyC:2,KeyR:8,KeyF:1,KeyQ:16,KeyE:32,ShiftLeft:64,ShiftRight:64,ControlLeft:128,ControlRight:128,Backspace:256,Enter:512,KeyZ:1024,KeyX:2048,KeyH:4096,KeyP:8192,KeyK:4,KeyJ:2,KeyI:8,KeyU:1};
-const desktopCodes=new Set([...Object.keys(desktopKeyBits),"KeyW","KeyA","KeyS","KeyD","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"]);
+const mappingKey="switchpad-desktop-map-v1";
+const mappingActions=[
+  ["leftUp","Left stick up","KeyW"],["leftDown","Left stick down","KeyS"],["leftLeft","Left stick left","KeyA"],["leftRight","Left stick right","KeyD"],
+  ["dpadUp","D-pad up","ArrowUp"],["dpadDown","D-pad down","ArrowDown"],["dpadLeft","D-pad left","ArrowLeft"],["dpadRight","D-pad right","ArrowRight"],
+  ["a","A","Space"],["b","B","KeyC"],["x","X","KeyR"],["y","Y","KeyF"],["l","L","KeyQ"],["r","R","KeyE"],["zl","ZL","ShiftLeft"],["zr","ZR","ControlLeft"],
+  ["minus","Minus","Backspace"],["plus","Plus","Enter"],["lclick","Left stick click","KeyZ"],["rclick","Right stick click","KeyX"],["home","Home","KeyH"],["capture","Capture","KeyP"]
+];
+const actionBits={a:4,b:2,x:8,y:1,l:16,r:32,zl:64,zr:128,minus:256,plus:512,lclick:1024,rclick:2048,home:4096,capture:8192};
+const defaultDesktopMapping=()=>({keys:Object.fromEntries(mappingActions.map(([id,,code])=>[id,code])),mouseLeft:"zr",mouseRight:"zl",mouseAxis:"right",sensitivity:2.8});
+let desktopMapping=defaultDesktopMapping(),captureAction="";
+function loadDesktopMapping(){try{const saved=JSON.parse(localStorage.getItem(mappingKey)||"null");if(saved)desktopMapping={...defaultDesktopMapping(),...saved,keys:{...defaultDesktopMapping().keys,...saved.keys}}}catch(e){desktopMapping=defaultDesktopMapping()}}
+function saveDesktopMapping(){try{localStorage.setItem(mappingKey,JSON.stringify(desktopMapping))}catch(e){}}
+function keyLabel(code){return code.replace(/^Key/,"").replace(/^Digit/,"").replace("Arrow","").replace("Left"," L").replace("Right"," R")}
+function actionOptions(selected){return `<option value="">None</option>${Object.keys(actionBits).map(id=>`<option value="${id}"${id===selected?" selected":""}>${id.toUpperCase()}</option>`).join("")}`}
+function renderKeymap(){
+  const grid=document.getElementById("keymapGrid");grid.innerHTML=mappingActions.map(([id,label])=>`<label class="keymap-row"><span>${label}</span><button data-map-key="${id}">${keyLabel(desktopMapping.keys[id])}</button></label>`).join("")+`<label class="keymap-row"><span>Mouse left</span><select id="mouseLeftMap">${actionOptions(desktopMapping.mouseLeft)}</select></label><label class="keymap-row"><span>Mouse right</span><select id="mouseRightMap">${actionOptions(desktopMapping.mouseRight)}</select></label><label class="keymap-row"><span>Mouse movement</span><select id="mouseAxisMap"><option value="right"${desktopMapping.mouseAxis==="right"?" selected":""}>Right stick</option><option value="left"${desktopMapping.mouseAxis==="left"?" selected":""}>Left stick</option><option value="off"${desktopMapping.mouseAxis==="off"?" selected":""}>Off</option></select></label><label class="keymap-row"><span>Mouse sensitivity</span><input id="mouseSensitivity" type="range" min="0.8" max="6" step="0.2" value="${desktopMapping.sensitivity}"></label>`;
+  for(const button of grid.querySelectorAll("[data-map-key]"))button.addEventListener("click",()=>{captureAction=button.dataset.mapKey;button.textContent="Press key";button.classList.add("capturing")});
+  for(const [id,key] of [["mouseLeftMap","mouseLeft"],["mouseRightMap","mouseRight"],["mouseAxisMap","mouseAxis"],["mouseSensitivity","sensitivity"]])document.getElementById(id).addEventListener("input",e=>{desktopMapping[key]=key==="sensitivity"?Number(e.target.value):e.target.value;saveDesktopMapping()});
+}
+loadDesktopMapping();
 function pointerLocked(){return (document.pointerLockElement||document.webkitPointerLockElement)===gamepadEl}
 function updateDesktopInput(){
-  let buttons=0;for(const code of desktopKeys)buttons|=desktopKeyBits[code]||0;if(desktopMouseButtons.has(0))buttons|=128;if(desktopMouseButtons.has(2))buttons|=64;desktop.buttons=buttons;
-  const left=desktopKeys.has("KeyA"),right=desktopKeys.has("KeyD"),up=desktopKeys.has("KeyW"),down=desktopKeys.has("KeyS");desktopAxes.lx=left||right||up||down;desktop.lx=128+(right?127:0)-(left?127:0);desktop.ly=128+(down?127:0)-(up?127:0);
-  const du=desktopKeys.has("ArrowUp"),dd=desktopKeys.has("ArrowDown"),dl=desktopKeys.has("ArrowLeft"),dr=desktopKeys.has("ArrowRight");desktop.hat=du&&dr?1:dr&&dd?3:dd&&dl?5:dl&&du?7:du?0:dr?2:dd?4:dl?6:8;send();
+  let buttons=0;for(const [id,bit] of Object.entries(actionBits))if(desktopKeys.has(desktopMapping.keys[id]))buttons|=bit;if(desktopMouseButtons.has(0))buttons|=actionBits[desktopMapping.mouseLeft]||0;if(desktopMouseButtons.has(2))buttons|=actionBits[desktopMapping.mouseRight]||0;desktop.buttons=buttons;
+  const left=desktopKeys.has(desktopMapping.keys.leftLeft),right=desktopKeys.has(desktopMapping.keys.leftRight),up=desktopKeys.has(desktopMapping.keys.leftUp),down=desktopKeys.has(desktopMapping.keys.leftDown);desktopAxes.lx=left||right||up||down;desktop.lx=128+(right?127:0)-(left?127:0);desktop.ly=128+(down?127:0)-(up?127:0);
+  const du=desktopKeys.has(desktopMapping.keys.dpadUp),dd=desktopKeys.has(desktopMapping.keys.dpadDown),dl=desktopKeys.has(desktopMapping.keys.dpadLeft),dr=desktopKeys.has(desktopMapping.keys.dpadRight);desktop.hat=du&&dr?1:dr&&dd?3:dd&&dl?5:dl&&du?7:du?0:dr?2:dd?4:dl?6:8;send();
 }
 function clearDesktopInput(){desktopKeys.clear();desktopMouseButtons.clear();mouseVX=mouseVY=0;Object.assign(desktop,neutral());desktopAxes.lx=desktopAxes.rx=false;send(true)}
 async function enterDesktopMode(){
@@ -291,33 +317,43 @@ async function enterDesktopMode(){
   try{const requestFullscreen=gamepadEl.requestFullscreen||gamepadEl.webkitRequestFullscreen;if(requestFullscreen){const result=requestFullscreen.call(gamepadEl);if(result&&result.then)await result}desktopMode=true;document.body.classList.add("desktop-mode");const requestLock=gamepadEl.requestPointerLock||gamepadEl.webkitRequestPointerLock;if(requestLock){const result=requestLock.call(gamepadEl);if(result&&result.catch)result.catch(()=>{})}}catch(e){statusEl.textContent="fullscreen unavailable"}
 }
 desktopButton.addEventListener("click",enterDesktopMode);
+document.getElementById("editKeymap").addEventListener("click",()=>{renderKeymap();document.getElementById("keymapPanel").classList.add("open")});
+document.getElementById("closeKeymap").addEventListener("click",()=>{captureAction="";document.getElementById("keymapPanel").classList.remove("open")});
+document.getElementById("resetKeymap").addEventListener("click",()=>{desktopMapping=defaultDesktopMapping();saveDesktopMapping();renderKeymap()});
 document.addEventListener("fullscreenchange",()=>{desktopMode=document.fullscreenElement===gamepadEl;document.body.classList.toggle("desktop-mode",desktopMode);if(!desktopMode)clearDesktopInput()});
 document.addEventListener("webkitfullscreenchange",()=>{desktopMode=document.webkitFullscreenElement===gamepadEl;document.body.classList.toggle("desktop-mode",desktopMode);if(!desktopMode)clearDesktopInput()});
-document.addEventListener("pointerlockchange",()=>{if(!pointerLocked()){mouseVX=mouseVY=0;desktop.rx=desktop.ry=128;desktopAxes.rx=false;send(true)}});
-document.addEventListener("keydown",e=>{if(!desktopMode||!desktopCodes.has(e.code)||e.target===photoInput)return;e.preventDefault();desktopKeys.add(e.code);updateDesktopInput()});
-document.addEventListener("keyup",e=>{if(!desktopCodes.has(e.code))return;if(desktopMode)e.preventDefault();desktopKeys.delete(e.code);updateDesktopInput()});
-document.addEventListener("mousemove",e=>{if(!desktopMode||!pointerLocked())return;mouseVX=Math.max(-127,Math.min(127,mouseVX+e.movementX*2.8));mouseVY=Math.max(-127,Math.min(127,mouseVY+e.movementY*2.8));desktopAxes.rx=true;desktop.rx=Math.round(128+mouseVX);desktop.ry=Math.round(128+mouseVY);send()});
+document.addEventListener("pointerlockchange",()=>{if(!pointerLocked()){
+  mouseVX=mouseVY=0;
+  if(desktopMapping.mouseAxis==="left"){desktop.lx=desktop.ly=128;desktopAxes.lx=false}
+  else{desktop.rx=desktop.ry=128;desktopAxes.rx=false}
+  updateDesktopInput()
+}});
+document.addEventListener("keydown",e=>{if(captureAction){e.preventDefault();desktopMapping.keys[captureAction]=e.code;captureAction="";saveDesktopMapping();renderKeymap();return}if(!desktopMode||!Object.values(desktopMapping.keys).includes(e.code)||e.target===photoInput)return;e.preventDefault();desktopKeys.add(e.code);updateDesktopInput()});
+document.addEventListener("keyup",e=>{if(!Object.values(desktopMapping.keys).includes(e.code))return;if(desktopMode)e.preventDefault();desktopKeys.delete(e.code);updateDesktopInput()});
+document.addEventListener("mousemove",e=>{if(!desktopMode||!pointerLocked()||desktopMapping.mouseAxis==="off")return;mouseVX=Math.max(-127,Math.min(127,mouseVX+e.movementX*desktopMapping.sensitivity));mouseVY=Math.max(-127,Math.min(127,mouseVY+e.movementY*desktopMapping.sensitivity));const left=desktopMapping.mouseAxis==="left";desktopAxes[left?"lx":"rx"]=true;desktop[left?"lx":"rx"]=Math.round(128+mouseVX);desktop[left?"ly":"ry"]=Math.round(128+mouseVY);send()});
 document.addEventListener("mousedown",e=>{if(!desktopMode||!pointerLocked())return;e.preventDefault();e.stopPropagation();desktopMouseButtons.add(e.button);updateDesktopInput()},true);
 document.addEventListener("mouseup",e=>{if(!desktopMode)return;e.preventDefault();desktopMouseButtons.delete(e.button);updateDesktopInput()},true);
 window.addEventListener("blur",clearDesktopInput);
-function desktopFrame(){if(desktopMode&&pointerLocked()&&desktopAxes.rx){mouseVX*=.72;mouseVY*=.72;if(Math.abs(mouseVX)<.7)mouseVX=0;if(Math.abs(mouseVY)<.7)mouseVY=0;desktop.rx=Math.round(128+mouseVX);desktop.ry=Math.round(128+mouseVY);desktopAxes.rx=mouseVX!==0||mouseVY!==0;send()}requestAnimationFrame(desktopFrame)}desktopFrame();
+function desktopFrame(){const left=desktopMapping.mouseAxis==="left",axis=left?"lx":"rx";if(desktopMode&&pointerLocked()&&desktopAxes[axis]){mouseVX*=.72;mouseVY*=.72;if(Math.abs(mouseVX)<.7)mouseVX=0;if(Math.abs(mouseVY)<.7)mouseVY=0;desktop[axis]=Math.round(128+mouseVX);desktop[left?"ly":"ry"]=Math.round(128+mouseVY);desktopAxes[axis]=mouseVX!==0||mouseVY!==0;send()}requestAnimationFrame(desktopFrame)}desktopFrame();
 function pressButton(el,on){
   const bit=Number(el.dataset.bit);touch.buttons=on?touch.buttons|bit:touch.buttons&~bit;el.classList.toggle("down",on);send();
   if(on&&navigator.vibrate)navigator.vibrate(8);
 }
 for(const b of document.querySelectorAll("button[data-bit]")){
-  b.addEventListener("pointerdown",e=>{if(editing)return;e.preventDefault();b.setPointerCapture(e.pointerId);pressButton(b,true)});
-  const off=e=>{if(editing)return;e.preventDefault();pressButton(b,false)};
+  b.addEventListener("pointerdown",e=>{if(editing||e.pointerType==="mouse")return;e.preventDefault();b.setPointerCapture(e.pointerId);pressButton(b,true)});
+  const off=e=>{if(editing||e.pointerType==="mouse")return;e.preventDefault();pressButton(b,false)};
   b.addEventListener("pointerup",off);b.addEventListener("pointercancel",off);b.addEventListener("lostpointercapture",()=>pressButton(b,false));
+  b.addEventListener("click",()=>{if(editing||!matchMedia("(hover:hover) and (pointer:fine)").matches)return;pressButton(b,true);setTimeout(()=>pressButton(b,false),85)});
 }
 function updateHat(){
   const u=dirs.has("up"),d=dirs.has("down"),l=dirs.has("left"),r=dirs.has("right");
   touch.hat=u&&r?1:r&&d?3:d&&l?5:l&&u?7:u?0:r?2:d?4:l?6:8;send();
 }
 for(const b of document.querySelectorAll("button[data-dir]")){
-  b.addEventListener("pointerdown",e=>{if(editing)return;e.preventDefault();b.setPointerCapture(e.pointerId);dirs.add(b.dataset.dir);b.classList.add("down");updateHat()});
-  const off=e=>{if(editing)return;e.preventDefault();dirs.delete(b.dataset.dir);b.classList.remove("down");updateHat()};
+  b.addEventListener("pointerdown",e=>{if(editing||e.pointerType==="mouse")return;e.preventDefault();b.setPointerCapture(e.pointerId);dirs.add(b.dataset.dir);b.classList.add("down");updateHat()});
+  const off=e=>{if(editing||e.pointerType==="mouse")return;e.preventDefault();dirs.delete(b.dataset.dir);b.classList.remove("down");updateHat()};
   b.addEventListener("pointerup",off);b.addEventListener("pointercancel",off);b.addEventListener("lostpointercapture",off);
+  b.addEventListener("click",()=>{if(editing||!matchMedia("(hover:hover) and (pointer:fine)").matches)return;dirs.add(b.dataset.dir);b.classList.add("down");updateHat();setTimeout(()=>{dirs.delete(b.dataset.dir);b.classList.remove("down");updateHat()},85)});
 }
 for(const zone of document.querySelectorAll(".side")){
   const stick=zone.querySelector(".stick"),nub=stick.querySelector(".nub"),isLeft=zone.classList.contains("left");let pointer=null,baseX=0,baseY=0,x="lx",y="ly";
@@ -344,7 +380,7 @@ function updateUndo(){undoButton.disabled=undoHistory.length===0}
 function pushUndo(){undoHistory.push(readLayout());if(undoHistory.length>30)undoHistory.shift();updateUndo()}
 function selectControl(el){if(selected)selected.classList.remove("selected");selected=el;if(selected)selected.classList.add("selected");positionResizeHandle()}
 function positionResizeHandle(){if(!editing||!selected){resizeHandle.classList.remove("active");return}const r=selected.getBoundingClientRect();resizeHandle.style.left=`${r.right-15}px`;resizeHandle.style.top=`${r.bottom-15}px`;resizeHandle.classList.add("active")}
-function finishEdit(){selectControl(null);editing=false;document.body.classList.remove("editing")}
+function finishEdit(){selectControl(null);captureAction="";document.getElementById("keymapPanel").classList.remove("open");editing=false;document.body.classList.remove("editing")}
 document.getElementById("editLayout").addEventListener("click",()=>{editSnapshot=readLayout();undoHistory=[];updateUndo();Object.assign(touch,neutral());dirs.clear();send(true);editing=true;document.body.classList.add("editing");selectControl(document.querySelector('[data-move="face"]'))});
 swapButton.addEventListener("click",()=>{pushUndo();setStickSwap(!sticksSwapped)});
 undoButton.addEventListener("click",()=>{if(!undoHistory.length)return;applyLayout(undoHistory.pop());updateUndo()});
@@ -385,6 +421,9 @@ function pollGamepads(){
 }
 window.addEventListener("gamepadconnected",()=>send(true));window.addEventListener("gamepaddisconnected",()=>send(true));pollGamepads();setInterval(()=>send(true),250);
 document.addEventListener("contextmenu",e=>e.preventDefault());
+document.addEventListener("dblclick",e=>e.preventDefault(),{passive:false});
+document.addEventListener("gesturestart",e=>e.preventDefault(),{passive:false});
+let lastTouchEnd=0;document.addEventListener("touchend",e=>{const now=Date.now();if(now-lastTouchEnd<320)e.preventDefault();lastTouchEnd=now},{passive:false});
 </script>
 </body>
 </html>

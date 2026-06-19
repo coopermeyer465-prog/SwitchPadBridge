@@ -35,13 +35,15 @@ Tap the pencil in the lower-right corner to edit the layout. Every button can be
 
 ## Multi-player status
 
-The four-report-ID experiment was rejected by the Pokken controller profile and produced invalid button input. The stable firmware therefore exposes one USB controller, and multiple connected phones intentionally feed that same controller. A genuine multi-player version needs separate USB device addresses, which this XIAO cannot provide through its single USB device controller without additional hub/device hardware.
+The four-report-ID experiment was rejected by the Pokken controller profile and produced invalid button input. The stable firmware therefore exposes one USB controller, and multiple connected phones intentionally feed that same controller. A genuine multi-player version needs separate USB device addresses, which this XIAO cannot provide through its single USB device controller without additional hub/device hardware. TinyUSB's hub support is host-side, so a descriptor-only "virtual hub" cannot create working downstream controllers; the remaining one-board experiment is a custom composite device with multiple separate HID interfaces.
 
 A separate app only works if it sends input directly to the ESP32. The firmware currently accepts its compact input format over UDP port `7777`; OSC apps such as TouchOSC would require a small OSC parser or a custom bridge.
 
 ## Keyboard and mouse
 
 On a computer, click the fullscreen icon in the lower-left corner to enter desktop controller mode. The page uses pointer lock so mouse motion drives the right stick and automatically springs back to center. Press Escape to release the mouse and leave fullscreen.
+
+While editing on a computer, use the keyboard icon to change every key binding, assign left and right mouse clicks, choose which stick mouse movement controls, and adjust mouse sensitivity. These mappings are saved locally on that computer. On-screen controls require a completed mouse click on computers; touch controls still respond immediately to touch-down for gameplay.
 
 | Input | Switch control |
 | --- | --- |
