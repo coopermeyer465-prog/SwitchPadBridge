@@ -292,6 +292,7 @@ function send(force=false){
 }
 const desktopButton=document.getElementById("desktopMode");
 const mappingKey="switchpad-desktop-map-v2";
+const legacyMappingKey="switchpad-desktop-map-v1";
 const mappingActions=[
   ["leftUp","Left stick up","KeyW"],["leftDown","Left stick down","KeyS"],["leftLeft","Left stick left","KeyA"],["leftRight","Left stick right","KeyD"],
   ["dpadUp","D-pad up","ArrowUp"],["dpadDown","D-pad down","ArrowDown"],["dpadLeft","D-pad left","ArrowLeft"],["dpadRight","D-pad right","ArrowRight"],
@@ -301,7 +302,7 @@ const mappingActions=[
 const actionBits={a:4,b:2,x:8,y:1,l:16,r:32,zl:64,zr:128,minus:256,plus:512,lclick:1024,rclick:2048,home:4096,capture:8192};
 const defaultDesktopMapping=()=>({keys:Object.fromEntries(mappingActions.map(([id,,code])=>[id,code])),mouseLeft:"zr",mouseRight:"zl",mouseAxis:"right",sensitivity:5.2});
 let desktopMapping=defaultDesktopMapping(),captureAction="";
-function loadDesktopMapping(){try{const saved=JSON.parse(localStorage.getItem(mappingKey)||"null");if(saved)desktopMapping={...defaultDesktopMapping(),...saved,keys:{...defaultDesktopMapping().keys,...saved.keys}}}catch(e){desktopMapping=defaultDesktopMapping()}}
+function loadDesktopMapping(){try{const current=localStorage.getItem(mappingKey),saved=JSON.parse(current||localStorage.getItem(legacyMappingKey)||"null");if(saved){desktopMapping={...defaultDesktopMapping(),...saved,keys:{...defaultDesktopMapping().keys,...saved.keys}};if(!current&&desktopMapping.sensitivity===2.8)desktopMapping.sensitivity=5.2;if(!current)saveDesktopMapping()}}catch(e){desktopMapping=defaultDesktopMapping()}}
 function saveDesktopMapping(){try{localStorage.setItem(mappingKey,JSON.stringify(desktopMapping))}catch(e){}}
 function keyLabel(code){return code.replace(/^Key/,"").replace(/^Digit/,"").replace("Arrow","").replace("Left"," L").replace("Right"," R")}
 function actionOptions(selected){return `<option value="">None</option>${Object.keys(actionBits).map(id=>`<option value="${id}"${id===selected?" selected":""}>${id.toUpperCase()}</option>`).join("")}`}
