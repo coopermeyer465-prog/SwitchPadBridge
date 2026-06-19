@@ -7,6 +7,8 @@
 #include "esp_http_server.h"
 #include "esp_log.h"
 #include "esp_netif.h"
+#include "esp_ota_ops.h"
+#include "esp_system.h"
 #include "esp_wifi.h"
 #include "lwip/ip_addr.h"
 #include "nvs_flash.h"
@@ -256,6 +258,58 @@ static esp_err_t websocket_handler(httpd_req_t *req) {
   return ESP_OK;
 }
 
+static void reboot_task(void *) {
+  vTaskDelay(pdMS_TO_TICKS(500));
+  esp_restart();
+}
+
+static esp_err_t update_handler(httpd_req_t *req) {
+  char update_key[32] = {};
+  if (httpd_req_get_hdr_value_str(req, "X-SwitchPad-Update", update_key, sizeof(update_key)) != ESP_OK ||
+      strcmp(update_key, "local-firmware") != 0) {
+    return httpd_resp_send_err(req, HTTPD_403_FORBIDDEN, "update key required");
+  }
+
+  const esp_partition_t *partition = esp_ota_get_next_update_partition(nullptr);
+  if (!partition || req->content_len <= 0 || static_cast<size_t>(req->content_len) > partition->size) {
+    return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "invalid firmware size");
+  }
+
+  for (uint8_t i = 0; i < kControllerCount; i++) neutralize(i);
+  esp_ota_handle_t update_handle = 0;
+  esp_err_t result = esp_ota_begin(partition, OTA_WITH_SEQUENTIAL_WRITES, &update_handle);
+  if (result != ESP_OK) return httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "could not start update");
+
+  uint8_t *buffer = static_cast<uint8_t *>(malloc(4096));
+  if (!buffer) {
+    esp_ota_abort(update_handle);
+    return httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "out of memory");
+  }
+
+  size_t remaining = req->content_len;
+  while (remaining > 0) {
+    const size_t requested = remaining < 4096 ? remaining : 4096;
+    const int received = httpd_req_recv(req, reinterpret_cast<char *>(buffer), requested);
+    if (received == HTTPD_SOCK_ERR_TIMEOUT) continue;
+    if (received <= 0 || esp_ota_write(update_handle, buffer, received) != ESP_OK) {
+      free(buffer);
+      esp_ota_abort(update_handle);
+      return httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "firmware transfer failed");
+    }
+    remaining -= received;
+  }
+  free(buffer);
+
+  result = esp_ota_end(update_handle);
+  if (result != ESP_OK || esp_ota_set_boot_partition(partition) != ESP_OK) {
+    return httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "firmware verification failed");
+  }
+
+  const esp_err_t response = httpd_resp_sendstr(req, "update accepted; rebooting");
+  xTaskCreate(reboot_task, "ota_reboot", 2048, nullptr, 8, nullptr);
+  return response;
+}
+
 static void start_http_server() {
   httpd_config_t config = HTTPD_DEFAULT_CONFIG();
   config.stack_size = 8192;
@@ -265,6 +319,7 @@ static void start_http_server() {
   const httpd_uri_t root_uri = {.uri = "/", .method = HTTP_GET, .handler = root_handler, .user_ctx = nullptr};
   const httpd_uri_t claim_uri = {.uri = "/api/claim", .method = HTTP_GET, .handler = claim_handler, .user_ctx = nullptr};
   const httpd_uri_t input_uri = {.uri = "/api/input", .method = HTTP_POST, .handler = input_handler, .user_ctx = nullptr};
+  const httpd_uri_t update_uri = {.uri = "/api/update", .method = HTTP_POST, .handler = update_handler, .user_ctx = nullptr};
   const httpd_uri_t websocket_uri = {
     .uri = "/ws", .method = HTTP_GET, .handler = websocket_handler, .user_ctx = nullptr,
     .is_websocket = true, .handle_ws_control_frames = false, .supported_subprotocol = nullptr,
@@ -272,6 +327,7 @@ static void start_http_server() {
   ESP_ERROR_CHECK(httpd_register_uri_handler(server, &root_uri));
   ESP_ERROR_CHECK(httpd_register_uri_handler(server, &claim_uri));
   ESP_ERROR_CHECK(httpd_register_uri_handler(server, &input_uri));
+  ESP_ERROR_CHECK(httpd_register_uri_handler(server, &update_uri));
   ESP_ERROR_CHECK(httpd_register_uri_handler(server, &websocket_uri));
 }
 

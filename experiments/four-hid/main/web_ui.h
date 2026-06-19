@@ -287,7 +287,7 @@ for(const b of document.querySelectorAll("button[data-dir]")){
 for(const zone of document.querySelectorAll(".side")){
   const stick=zone.querySelector(".stick"),nub=stick.querySelector(".nub"),isLeft=zone.classList.contains("left");let pointer=null,baseX=0,baseY=0,x="lx",y="ly";
   const chooseAxes=()=>{const rightStick=isLeft?sticksSwapped:!sticksSwapped;x=rightStick?"rx":"lx";y=rightStick?"ry":"ly"};
-  const move=e=>{const max=stick.getBoundingClientRect().width*.31;let dx=e.clientX-baseX,dy=e.clientY-baseY,d=Math.hypot(dx,dy);if(d>max){dx=dx/d*max;dy=dy/d*max}nub.style.transform=`translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px))`;touch[x]=Math.round(128+dx/max*127);touch[y]=Math.round(128+dy/max*127);send()};
+  const move=e=>{const max=stick.getBoundingClientRect().width*.31;let dx=e.clientX-baseX,dy=e.clientY-baseY,d=Math.hypot(dx,dy);if(d>max){dx=dx/d*max;dy=dy/d*max}nub.style.transform=`translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px))`;const outputMax=max*.72;touch[x]=Math.round(Math.max(1,Math.min(255,128+dx/outputMax*127)));touch[y]=Math.round(Math.max(1,Math.min(255,128+dy/outputMax*127)));send()};
   zone.addEventListener("pointerdown",e=>{if(editing||pointer!==null||e.target.closest("button,.dpad,.face,.shoulders"))return;e.preventDefault();chooseAxes();pointer=e.pointerId;baseX=e.clientX;baseY=e.clientY;stick.style.left=`${baseX}px`;stick.style.top=`${baseY}px`;stick.classList.add("active");activeSticks[x]=true;zone.setPointerCapture(pointer);move(e)});
   zone.addEventListener("pointermove",e=>{if(e.pointerId===pointer)move(e)});
   const end=e=>{if(e.pointerId!==pointer)return;pointer=null;activeSticks[x]=false;stick.classList.remove("active");nub.style.transform="translate(-50%,-50%)";touch[x]=128;touch[y]=128;send()};
