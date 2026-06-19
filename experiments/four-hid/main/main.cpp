@@ -14,9 +14,11 @@
 #include "tinyusb_default_config.h"
 #include "class/hid/hid_device.h"
 #include "secrets.h"
+#include "web_ui.h"
 
 static constexpr uint8_t kControllerCount = 4;
 static constexpr uint32_t kInputTimeoutMs = 900;
+static constexpr uint32_t kClientLeaseMs = 15000;
 static const char *kTag = "switchpad-4hid";
 
 struct SwitchReport {
@@ -32,6 +34,13 @@ struct SwitchReport {
 static SwitchReport reports[kControllerCount];
 static uint32_t last_input_ms[kControllerCount];
 static portMUX_TYPE report_lock = portMUX_INITIALIZER_UNLOCKED;
+
+struct ClientSlot {
+  char device_id[40];
+  uint32_t last_seen_ms;
+};
+
+static ClientSlot clients[kControllerCount] = {};
 
 static const uint8_t hid_report_descriptor[] = {
   0x05, 0x01, 0x09, 0x05, 0xA1, 0x01,
@@ -94,52 +103,176 @@ extern "C" uint16_t tud_hid_get_report_cb(uint8_t, uint8_t, hid_report_type_t, u
 
 extern "C" void tud_hid_set_report_cb(uint8_t, uint8_t, hid_report_type_t, uint8_t const *, uint16_t) {}
 
-static const char diagnostic_page[] = R"HTML(<!doctype html>
-<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
-<title>SwitchPad Four HID Test</title><style>
-*{box-sizing:border-box}body{margin:0;background:#0b0e12;color:#f5f7fa;font-family:-apple-system,sans-serif;padding:18px;touch-action:manipulation}main{max-width:720px;margin:auto}h1{font-size:22px;margin:0 0 8px}p{color:#9eabb8;margin:0 0 18px}.players{display:grid;grid-template-columns:1fr 1fr;gap:12px}.player{border:1px solid #46515d;border-radius:8px;padding:12px;background:#151a20}.player h2{font-size:16px;margin:0 0 10px;color:#64c7ff}.buttons{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}button{min-height:48px;border:1px solid #596673;border-radius:7px;background:#282f37;color:white;font:700 15px inherit;touch-action:none}button.down{background:#176b69;border-color:#36ddd5}.pair{grid-column:span 2}@media(max-width:560px){.players{grid-template-columns:1fr}}</style></head>
-<body><main><h1>Four-interface test</h1><p>Open Change Grip/Order, then hold L+R for each player. Each panel sends to a different USB HID interface.</p><div class="players" id="players"></div></main>
-<script>
-const actions=[['L + R',48,'pair'],['A',4,''],['B',2,''],['X',8,''],['Y',1,'']];
-const root=document.getElementById('players');
-for(let p=0;p<4;p++){const box=document.createElement('section');box.className='player';box.innerHTML=`<h2>Player ${p+1}</h2><div class="buttons">${actions.map(([n,b,c])=>`<button class="${c}" data-player="${p}" data-buttons="${b}">${n}</button>`).join('')}</div>`;root.appendChild(box)}
-let timer=0;async function send(p,b){fetch(`/input?player=${p}&buttons=${b}`,{cache:'no-store'}).catch(()=>{})}
-for(const b of document.querySelectorAll('button')){const start=e=>{e.preventDefault();b.setPointerCapture(e.pointerId);b.classList.add('down');send(b.dataset.player,b.dataset.buttons);clearInterval(timer);timer=setInterval(()=>send(b.dataset.player,b.dataset.buttons),120)};const end=e=>{e.preventDefault();clearInterval(timer);timer=0;b.classList.remove('down');send(b.dataset.player,0)};b.addEventListener('pointerdown',start);b.addEventListener('pointerup',end);b.addEventListener('pointercancel',end);b.addEventListener('lostpointercapture',end)}
-</script></body></html>)HTML";
-
 static esp_err_t root_handler(httpd_req_t *req) {
   httpd_resp_set_type(req, "text/html");
   httpd_resp_set_hdr(req, "Cache-Control", "no-store");
-  return httpd_resp_send(req, diagnostic_page, HTTPD_RESP_USE_STRLEN);
+  return httpd_resp_send(req, INDEX_HTML, HTTPD_RESP_USE_STRLEN);
+}
+
+static uint32_t now_ms() {
+  return xTaskGetTickCount() * portTICK_PERIOD_MS;
+}
+
+static bool valid_device_id(const char *device_id) {
+  const size_t length = strlen(device_id);
+  if (length < 8 || length >= sizeof(clients[0].device_id)) return false;
+  for (size_t i = 0; i < length; i++) {
+    const char c = device_id[i];
+    if (!((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '-' || c == '_')) return false;
+  }
+  return true;
+}
+
+static void neutralize(uint8_t player) {
+  portENTER_CRITICAL(&report_lock);
+  reports[player] = {0, 8, 128, 128, 128, 128, 0};
+  last_input_ms[player] = 0;
+  portEXIT_CRITICAL(&report_lock);
+}
+
+static int claim_slot(const char *device_id) {
+  if (!valid_device_id(device_id)) return -1;
+  const uint32_t now = now_ms();
+  int available = -1;
+  for (uint8_t i = 0; i < kControllerCount; i++) {
+    if (strcmp(clients[i].device_id, device_id) == 0) {
+      clients[i].last_seen_ms = now;
+      return i;
+    }
+    if (available < 0 && (clients[i].device_id[0] == '\0' || now - clients[i].last_seen_ms > kClientLeaseMs)) available = i;
+  }
+  if (available < 0) return -1;
+  neutralize(available);
+  strlcpy(clients[available].device_id, device_id, sizeof(clients[available].device_id));
+  clients[available].last_seen_ms = now;
+  return available;
+}
+
+static bool body_value(const char *body, const char *key, char *value, size_t value_size) {
+  const size_t key_length = strlen(key);
+  const char *cursor = body;
+  while ((cursor = strstr(cursor, key)) != nullptr) {
+    if ((cursor == body || cursor[-1] == '&') && cursor[key_length] == '=') {
+      cursor += key_length + 1;
+      const char *end = strchr(cursor, '&');
+      const size_t length = end ? static_cast<size_t>(end - cursor) : strlen(cursor);
+      if (length >= value_size) return false;
+      memcpy(value, cursor, length);
+      value[length] = '\0';
+      return true;
+    }
+    cursor += key_length;
+  }
+  return false;
+}
+
+static bool read_body(httpd_req_t *req, char *body, size_t capacity) {
+  if (req->content_len <= 0 || static_cast<size_t>(req->content_len) >= capacity) return false;
+  size_t received = 0;
+  while (received < static_cast<size_t>(req->content_len)) {
+    const int result = httpd_req_recv(req, body + received, req->content_len - received);
+    if (result == HTTPD_SOCK_ERR_TIMEOUT) continue;
+    if (result <= 0) return false;
+    received += result;
+  }
+  body[received] = '\0';
+  return true;
+}
+
+static int apply_input(const char *body) {
+  char device_id[40] = {};
+  if (!body_value(body, "device", device_id, sizeof(device_id)) || !valid_device_id(device_id)) return -2;
+  const int player = claim_slot(device_id);
+  if (player < 0) return -1;
+
+  char value[16] = {};
+  portENTER_CRITICAL(&report_lock);
+  SwitchReport next = reports[player];
+  portEXIT_CRITICAL(&report_lock);
+  if (body_value(body, "buttons", value, sizeof(value))) next.buttons = static_cast<uint16_t>(strtoul(value, nullptr, 0));
+  if (body_value(body, "hat", value, sizeof(value))) next.hat = static_cast<uint8_t>(strtoul(value, nullptr, 0));
+  if (body_value(body, "lx", value, sizeof(value))) next.lx = static_cast<uint8_t>(strtoul(value, nullptr, 0));
+  if (body_value(body, "ly", value, sizeof(value))) next.ly = static_cast<uint8_t>(strtoul(value, nullptr, 0));
+  if (body_value(body, "rx", value, sizeof(value))) next.rx = static_cast<uint8_t>(strtoul(value, nullptr, 0));
+  if (body_value(body, "ry", value, sizeof(value))) next.ry = static_cast<uint8_t>(strtoul(value, nullptr, 0));
+  if (next.hat > 8) next.hat = 8;
+  next.vendor = 0;
+  portENTER_CRITICAL(&report_lock);
+  reports[player] = next;
+  last_input_ms[player] = now_ms();
+  portEXIT_CRITICAL(&report_lock);
+  return player;
+}
+
+static esp_err_t claim_handler(httpd_req_t *req) {
+  char query[96] = {};
+  char device_id[40] = {};
+  if (httpd_req_get_url_query_str(req, query, sizeof(query)) != ESP_OK ||
+      httpd_query_key_value(query, "device", device_id, sizeof(device_id)) != ESP_OK || !valid_device_id(device_id)) {
+    return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "invalid device id");
+  }
+  const int player = claim_slot(device_id);
+  if (player < 0) {
+    httpd_resp_set_status(req, "503 Service Unavailable");
+    return httpd_resp_sendstr(req, "four controllers in use");
+  }
+  char response[48] = {};
+  snprintf(response, sizeof(response), "{\"player\":%d,\"controllers\":4}", player);
+  httpd_resp_set_type(req, "application/json");
+  httpd_resp_set_hdr(req, "Cache-Control", "no-store");
+  return httpd_resp_sendstr(req, response);
 }
 
 static esp_err_t input_handler(httpd_req_t *req) {
-  char query[96] = {};
-  char value[16] = {};
-  uint8_t player = 0;
-  uint16_t buttons = 0;
-  if (httpd_req_get_url_query_str(req, query, sizeof(query)) == ESP_OK) {
-    if (httpd_query_key_value(query, "player", value, sizeof(value)) == ESP_OK) player = static_cast<uint8_t>(atoi(value));
-    if (httpd_query_key_value(query, "buttons", value, sizeof(value)) == ESP_OK) buttons = static_cast<uint16_t>(strtoul(value, nullptr, 0));
+  char body[256] = {};
+  if (!read_body(req, body, sizeof(body))) return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "invalid input");
+  const int player = apply_input(body);
+  if (player == -2) return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "invalid device id");
+  if (player < 0) {
+    httpd_resp_set_status(req, "503 Service Unavailable");
+    return httpd_resp_sendstr(req, "four controllers in use");
   }
-  if (player < kControllerCount) {
-    portENTER_CRITICAL(&report_lock);
-    reports[player].buttons = buttons;
-    last_input_ms[player] = xTaskGetTickCount() * portTICK_PERIOD_MS;
-    portEXIT_CRITICAL(&report_lock);
+  return httpd_resp_send(req, nullptr, 0);
+}
+
+static esp_err_t websocket_handler(httpd_req_t *req) {
+  if (req->method == HTTP_GET) {
+    char query[96] = {};
+    char device_id[40] = {};
+    if (httpd_req_get_url_query_str(req, query, sizeof(query)) != ESP_OK ||
+        httpd_query_key_value(query, "device", device_id, sizeof(device_id)) != ESP_OK || claim_slot(device_id) < 0) {
+      return ESP_FAIL;
+    }
+    return ESP_OK;
   }
-  return httpd_resp_sendstr(req, "ok");
+  httpd_ws_frame_t frame = {};
+  frame.type = HTTPD_WS_TYPE_TEXT;
+  if (httpd_ws_recv_frame(req, &frame, 0) != ESP_OK || frame.len >= 256) return ESP_FAIL;
+  char body[256] = {};
+  frame.payload = reinterpret_cast<uint8_t *>(body);
+  if (httpd_ws_recv_frame(req, &frame, frame.len) != ESP_OK) return ESP_FAIL;
+  body[frame.len] = '\0';
+  apply_input(body);
+  return ESP_OK;
 }
 
 static void start_http_server() {
   httpd_config_t config = HTTPD_DEFAULT_CONFIG();
-  config.stack_size = 6144;
+  config.stack_size = 8192;
+  config.max_uri_handlers = 8;
   httpd_handle_t server = nullptr;
   ESP_ERROR_CHECK(httpd_start(&server, &config));
   const httpd_uri_t root_uri = {.uri = "/", .method = HTTP_GET, .handler = root_handler, .user_ctx = nullptr};
-  const httpd_uri_t input_uri = {.uri = "/input", .method = HTTP_GET, .handler = input_handler, .user_ctx = nullptr};
+  const httpd_uri_t claim_uri = {.uri = "/api/claim", .method = HTTP_GET, .handler = claim_handler, .user_ctx = nullptr};
+  const httpd_uri_t input_uri = {.uri = "/api/input", .method = HTTP_POST, .handler = input_handler, .user_ctx = nullptr};
+  const httpd_uri_t websocket_uri = {
+    .uri = "/ws", .method = HTTP_GET, .handler = websocket_handler, .user_ctx = nullptr,
+    .is_websocket = true, .handle_ws_control_frames = false, .supported_subprotocol = nullptr,
+  };
   ESP_ERROR_CHECK(httpd_register_uri_handler(server, &root_uri));
+  ESP_ERROR_CHECK(httpd_register_uri_handler(server, &claim_uri));
   ESP_ERROR_CHECK(httpd_register_uri_handler(server, &input_uri));
+  ESP_ERROR_CHECK(httpd_register_uri_handler(server, &websocket_uri));
 }
 
 static void connect_wifi() {
