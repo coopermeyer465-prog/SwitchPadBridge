@@ -161,9 +161,11 @@ button{font:inherit;color:inherit;touch-action:none;cursor:pointer}
 .layout-tools svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .player-select{display:none}
 .edit-actions{display:none;gap:7px}.editing .edit-actions{display:flex}.editing #editLayout{display:none}
-.editing [data-move]{outline:1px dashed #24d6cf;outline-offset:5px;cursor:move}.editing button[data-bit],.editing button[data-dir]{pointer-events:none}
+.editing [data-move]{outline:1px dashed #24d6cf;outline-offset:5px;cursor:move}.editing [data-move].selected{outline:2px solid #f5f7fa;outline-offset:6px}
+.resize-handle{display:none;position:fixed;z-index:30;width:30px;height:30px;border:2px solid #0b0e12;border-radius:50%;background:#24d6cf;box-shadow:0 3px 9px #000b;touch-action:none;cursor:nwse-resize}.editing .resize-handle.active{display:block}
 button.down,button:active{background:#3b4652!important;box-shadow:inset 0 2px 7px #000b!important;transform:translateY(1px)}
 .face button.down,.face button:active{transform:translateY(-50%) scale(.96)}#bX.down,#bX:active,#bB.down,#bB:active{transform:translateX(-50%) scale(.96)}
+.editing #bX:active,.editing #bB:active{transform:translateX(-50%)}.editing #bY:active,.editing #bA:active{transform:translateY(-50%)}
 @media(orientation:portrait){
  .side{top:76px;width:50%;min-width:0}.utility{top:max(12px,env(safe-area-inset-top));gap:7px}.utility button{width:42px;height:40px;font-size:13px}.statusbar.connection{display:none}
  .shoulders{top:10px;gap:5px}.shoulders button{width:clamp(58px,17vw,92px);height:34px;font-size:13px}.left .shoulders{left:8px}.right .shoulders{right:8px}
@@ -177,10 +179,10 @@ button.down,button:active{background:#3b4652!important;box-shadow:inset 0 2px 7p
 <body>
 <main class="gamepad">
   <div class="utility" data-move="utility">
-    <button data-bit="512" aria-label="Plus">+</button>
+    <button data-bit="256" aria-label="Minus">-</button>
     <button data-bit="4096" aria-label="Home">HOME</button>
     <button data-bit="8192" aria-label="Capture">CAP</button>
-    <button data-bit="256" aria-label="Minus">-</button>
+    <button data-bit="512" aria-label="Plus">+</button>
   </div>
   <section class="side left" aria-label="Left controls">
     <div class="shoulders" data-move="left-shoulders"><button data-bit="16">L</button><button data-bit="64">ZL</button></div>
@@ -193,14 +195,15 @@ button.down,button:active{background:#3b4652!important;box-shadow:inset 0 2px 7p
   <section class="side right" aria-label="Right controls">
     <div class="shoulders" data-move="right-shoulders"><button data-bit="32">R</button><button data-bit="128">ZR</button></div>
     <div class="control face" data-move="face">
-      <button id="bX" data-bit="8">X</button><button id="bB" data-bit="2">B</button>
-      <button id="bY" data-bit="1">Y</button><button id="bA" data-bit="4">A</button>
+      <button id="bX" data-bit="8" data-move="button-x">X</button><button id="bB" data-bit="2" data-move="button-b">B</button>
+      <button id="bY" data-bit="1" data-move="button-y">Y</button><button id="bA" data-bit="4" data-move="button-a">A</button>
     </div>
     <div id="stickR" class="control stick" data-x="rx" data-y="ry" data-click="2048"><div class="nub"></div></div>
   </section>
   <div class="statusbar connection"><span id="dot" class="dot"></span><span id="status">connecting</span></div>
   <div id="gp" class="statusbar physical">touch controls</div>
   <button id="playerSelect" class="player-select" aria-label="Select player" title="Select player">P1</button>
+  <div id="resizeHandle" class="resize-handle" aria-label="Resize selected control"></div>
   <div class="layout-tools">
     <button id="editLayout" aria-label="Edit layout" title="Edit layout"><svg viewBox="0 0 24 24"><path d="M21.2 6.8a2.1 2.1 0 0 0-4-4L3.8 16.2a2 2 0 0 0-.5.8L2 21.4a.5.5 0 0 0 .6.6L7 20.7a2 2 0 0 0 .8-.5z"/><path d="m15 5 4 4"/></svg></button>
     <div class="edit-actions">
@@ -270,23 +273,33 @@ for(const zone of document.querySelectorAll(".side")){
 const movable=[...document.querySelectorAll("[data-move]")];
 const layoutKey=()=>`switchpad-layout-v1-${matchMedia("(orientation:portrait)").matches?"portrait":"landscape"}`;
 function setOffset(el,x,y){el.dataset.moveX=String(Math.round(x));el.dataset.moveY=String(Math.round(y));el.style.translate=`${Math.round(x)}px ${Math.round(y)}px`}
-function readLayout(){return Object.fromEntries(movable.map(el=>[el.dataset.move,{x:Number(el.dataset.moveX)||0,y:Number(el.dataset.moveY)||0}]))}
-function applyLayout(layout={}){for(const el of movable){const p=layout[el.dataset.move]||{x:0,y:0};setOffset(el,p.x,p.y)}}
+function setSize(el,w,h){if(w){el.dataset.sizeW=String(Math.round(w));el.style.width=`${Math.round(w)}px`}else{delete el.dataset.sizeW;el.style.removeProperty("width")}if(h){el.dataset.sizeH=String(Math.round(h));el.style.height=`${Math.round(h)}px`}else{delete el.dataset.sizeH;el.style.removeProperty("height")}}
+function readLayout(){return Object.fromEntries(movable.map(el=>[el.dataset.move,{x:Number(el.dataset.moveX)||0,y:Number(el.dataset.moveY)||0,w:Number(el.dataset.sizeW)||0,h:Number(el.dataset.sizeH)||0}]))}
+function applyLayout(layout={}){for(const el of movable){const p=layout[el.dataset.move]||{x:0,y:0,w:0,h:0};setOffset(el,p.x,p.y);setSize(el,p.w,p.h)}positionResizeHandle()}
 function loadLayout(){try{applyLayout(JSON.parse(localStorage.getItem(layoutKey())||"{}"))}catch(e){applyLayout()}}
-let editSnapshot={};
-function finishEdit(){editing=false;document.body.classList.remove("editing")}
-document.getElementById("editLayout").addEventListener("click",()=>{editSnapshot=readLayout();Object.assign(touch,neutral());dirs.clear();send(true);editing=true;document.body.classList.add("editing")});
+const resizeHandle=document.getElementById("resizeHandle");
+let editSnapshot={},selected=null;
+function selectControl(el){if(selected)selected.classList.remove("selected");selected=el;if(selected)selected.classList.add("selected");positionResizeHandle()}
+function positionResizeHandle(){if(!editing||!selected){resizeHandle.classList.remove("active");return}const r=selected.getBoundingClientRect();resizeHandle.style.left=`${r.right-15}px`;resizeHandle.style.top=`${r.bottom-15}px`;resizeHandle.classList.add("active")}
+function finishEdit(){selectControl(null);editing=false;document.body.classList.remove("editing")}
+document.getElementById("editLayout").addEventListener("click",()=>{editSnapshot=readLayout();Object.assign(touch,neutral());dirs.clear();send(true);editing=true;document.body.classList.add("editing");selectControl(document.querySelector('[data-move="face"]'))});
 document.getElementById("resetLayout").addEventListener("click",()=>applyLayout());
 document.getElementById("cancelLayout").addEventListener("click",()=>{applyLayout(editSnapshot);finishEdit()});
 document.getElementById("saveLayout").addEventListener("click",()=>{try{localStorage.setItem(layoutKey(),JSON.stringify(readLayout()))}catch(e){}finishEdit()});
 for(const el of movable){
   let pointer=null,startX=0,startY=0,originX=0,originY=0;
-  el.addEventListener("pointerdown",e=>{if(!editing||pointer!==null)return;e.preventDefault();e.stopPropagation();pointer=e.pointerId;startX=e.clientX;startY=e.clientY;originX=Number(el.dataset.moveX)||0;originY=Number(el.dataset.moveY)||0;el.setPointerCapture(pointer)});
-  el.addEventListener("pointermove",e=>{if(e.pointerId!==pointer)return;let x=originX+e.clientX-startX,y=originY+e.clientY-startY;setOffset(el,x,y);const r=el.getBoundingClientRect(),pad=6;if(r.left<pad)x+=pad-r.left;if(r.right>innerWidth-pad)x-=r.right-(innerWidth-pad);if(r.top<pad)y+=pad-r.top;if(r.bottom>innerHeight-pad)y-=r.bottom-(innerHeight-pad);setOffset(el,x,y)});
+  el.addEventListener("pointerdown",e=>{if(!editing||pointer!==null)return;e.preventDefault();e.stopPropagation();selectControl(el);pointer=e.pointerId;startX=e.clientX;startY=e.clientY;originX=Number(el.dataset.moveX)||0;originY=Number(el.dataset.moveY)||0;el.setPointerCapture(pointer)});
+  el.addEventListener("pointermove",e=>{if(e.pointerId!==pointer)return;let x=originX+e.clientX-startX,y=originY+e.clientY-startY;setOffset(el,x,y);const r=el.getBoundingClientRect(),pad=6;if(r.left<pad)x+=pad-r.left;if(r.right>innerWidth-pad)x-=r.right-(innerWidth-pad);if(r.top<pad)y+=pad-r.top;if(r.bottom>innerHeight-pad)y-=r.bottom-(innerHeight-pad);setOffset(el,x,y);positionResizeHandle()});
   const end=e=>{if(e.pointerId===pointer)pointer=null};el.addEventListener("pointerup",end);el.addEventListener("pointercancel",end);el.addEventListener("lostpointercapture",end);
 }
+{
+  let pointer=null,startX=0,startY=0,startW=0,startH=0;
+  resizeHandle.addEventListener("pointerdown",e=>{if(!editing||!selected)return;e.preventDefault();e.stopPropagation();pointer=e.pointerId;startX=e.clientX;startY=e.clientY;const r=selected.getBoundingClientRect();startW=r.width;startH=r.height;resizeHandle.setPointerCapture(pointer)});
+  resizeHandle.addEventListener("pointermove",e=>{if(e.pointerId!==pointer||!selected)return;setSize(selected,Math.max(30,startW+e.clientX-startX),Math.max(30,startH+e.clientY-startY));positionResizeHandle()});
+  const end=e=>{if(e.pointerId===pointer)pointer=null};resizeHandle.addEventListener("pointerup",end);resizeHandle.addEventListener("pointercancel",end);resizeHandle.addEventListener("lostpointercapture",end);
+}
 loadLayout();
-window.addEventListener("orientationchange",()=>setTimeout(()=>{if(!editing)loadLayout()},150));
+window.addEventListener("orientationchange",()=>setTimeout(()=>{if(!editing)loadLayout();else positionResizeHandle()},150));
 function pressed(g,i){return !!g.buttons[i]&&(g.buttons[i].pressed||g.buttons[i].value>.5)}
 function pollGamepads(){
   const pads=navigator.getGamepads?[...navigator.getGamepads()].filter(Boolean):[];physicalConnected=pads.length>0;Object.assign(physical,neutral());
@@ -617,6 +630,7 @@ bool connectWifi() {
   }
   Serial.print("IP: ");
   Serial.println(WiFi.localIP());
+  MDNS.setInstanceName("SwitchPadBridge");
   if (MDNS.begin("switchpad")) {
     MDNS.addService("http", "tcp", HTTP_PORT);
     Serial.println("mDNS: http://switchpad.local/");

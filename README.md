@@ -31,11 +31,11 @@ The simplest setup needs no separate virtual-gamepad app:
 
 The layout responds to phone/iPad size and orientation. Touch and physical-controller state are merged, so either input method can be used without changing modes. Controller compatibility still depends on iOS/iPadOS and Safari exposing that device through the standard Gamepad API; unusual generic pads may use a nonstandard button order.
 
-Tap the pencil in the lower-right corner to edit the layout. Drag the center buttons, shoulder groups, D-pad, or face-button group; Reset restores defaults, Cancel discards the current edit, and Save stores separate portrait and landscape layouts locally on that device.
+Tap the pencil in the lower-right corner to edit the layout. Drag the center buttons, shoulder groups, D-pad, face-button group, or any individual A/B/X/Y button. The selected item has a turquoise corner handle that changes its width and height. Reset restores positions and sizes, Cancel discards the current edit, and Save stores separate portrait and landscape layouts locally on that device.
 
 ## Multi-player status
 
-The four-report-ID experiment was rejected by the Pokken controller profile and produced invalid button input. The stable firmware therefore exposes one USB controller. A genuine multi-player version needs separate USB device addresses, which this XIAO cannot provide through its single USB device controller without additional hub/device hardware.
+The four-report-ID experiment was rejected by the Pokken controller profile and produced invalid button input. The stable firmware therefore exposes one USB controller, and multiple connected phones intentionally feed that same controller. A genuine multi-player version needs separate USB device addresses, which this XIAO cannot provide through its single USB device controller without additional hub/device hardware.
 
 A separate app only works if it sends input directly to the ESP32. The firmware currently accepts its compact input format over UDP port `7777`; OSC apps such as TouchOSC would require a small OSC parser or a custom bridge.
 
