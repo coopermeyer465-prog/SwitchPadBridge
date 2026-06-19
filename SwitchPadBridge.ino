@@ -176,6 +176,11 @@ button{font:inherit;color:inherit;touch-action:none;cursor:pointer}
 .statusbar.connection{top:max(74px,calc(env(safe-area-inset-top) + 62px));left:50%;transform:translateX(-50%)}
 .statusbar.physical{top:auto;bottom:max(10px,env(safe-area-inset-bottom));left:50%;right:auto;transform:translateX(-50%);max-width:34%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .dot{width:9px;height:9px;flex:none;border-radius:50%;background:#e05555;box-shadow:0 0 0 3px #e0555525}.dot.ok{background:#24d6cf;box-shadow:0 0 0 3px #24d6cf28}
+.layout-tools{position:fixed;z-index:12;right:max(10px,env(safe-area-inset-right));bottom:max(10px,env(safe-area-inset-bottom));display:flex;gap:7px}
+.layout-tools button{position:relative;width:38px;height:38px;display:grid;place-items:center;border:1px solid #4b5561;border-radius:7px;background:#20262d;box-shadow:0 4px 10px #0008}
+.layout-tools svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.edit-actions{display:none;gap:7px}.editing .edit-actions{display:flex}.editing #editLayout{display:none}
+.editing [data-move]{outline:1px dashed #24d6cf;outline-offset:5px;cursor:move}.editing button[data-bit],.editing button[data-dir]{pointer-events:none}
 button.down,button:active{background:#3b4652!important;box-shadow:inset 0 2px 7px #000b!important;transform:translateY(1px)}
 .face button.down,.face button:active{transform:translateY(-50%) scale(.96)}#bX.down,#bX:active,#bB.down,#bB:active{transform:translateX(-50%) scale(.96)}
 @media(orientation:portrait){
@@ -190,23 +195,23 @@ button.down,button:active{background:#3b4652!important;box-shadow:inset 0 2px 7p
 </head>
 <body>
 <main class="gamepad">
-  <div class="utility">
+  <div class="utility" data-move="utility">
     <button data-bit="512" aria-label="Plus">+</button>
     <button data-bit="4096" aria-label="Home">HOME</button>
     <button data-bit="8192" aria-label="Capture">CAP</button>
     <button data-bit="256" aria-label="Minus">-</button>
   </div>
   <section class="side left" aria-label="Left controls">
-    <div class="shoulders"><button data-bit="16">L</button><button data-bit="64">ZL</button></div>
+    <div class="shoulders" data-move="left-shoulders"><button data-bit="16">L</button><button data-bit="64">ZL</button></div>
     <div id="stickL" class="control stick" data-x="lx" data-y="ly" data-click="1024"><div class="nub"></div></div>
-    <div class="control dpad">
+    <div class="control dpad" data-move="dpad">
       <button class="up" data-dir="up" aria-label="Up"></button><button class="south" data-dir="down" aria-label="Down"></button>
       <button class="west" data-dir="left" aria-label="Left"></button><button class="east" data-dir="right" aria-label="Right"></button>
     </div>
   </section>
   <section class="side right" aria-label="Right controls">
-    <div class="shoulders"><button data-bit="32">R</button><button data-bit="128">ZR</button></div>
-    <div class="control face">
+    <div class="shoulders" data-move="right-shoulders"><button data-bit="32">R</button><button data-bit="128">ZR</button></div>
+    <div class="control face" data-move="face">
       <button id="bX" data-bit="8">X</button><button id="bB" data-bit="2">B</button>
       <button id="bY" data-bit="1">Y</button><button id="bA" data-bit="4">A</button>
     </div>
@@ -214,13 +219,21 @@ button.down,button:active{background:#3b4652!important;box-shadow:inset 0 2px 7p
   </section>
   <div class="statusbar connection"><span id="dot" class="dot"></span><span id="status">connecting</span></div>
   <div id="gp" class="statusbar physical">touch controls</div>
+  <div class="layout-tools">
+    <button id="editLayout" aria-label="Edit layout" title="Edit layout"><svg viewBox="0 0 24 24"><path d="M21.2 6.8a2.1 2.1 0 0 0-4-4L3.8 16.2a2 2 0 0 0-.5.8L2 21.4a.5.5 0 0 0 .6.6L7 20.7a2 2 0 0 0 .8-.5z"/><path d="m15 5 4 4"/></svg></button>
+    <div class="edit-actions">
+      <button id="resetLayout" aria-label="Reset layout" title="Reset to default"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></button>
+      <button id="cancelLayout" aria-label="Cancel editing" title="Cancel"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+      <button id="saveLayout" aria-label="Save layout" title="Save layout"><svg viewBox="0 0 24 24"><path d="m20 6-11 11-5-5"/></svg></button>
+    </div>
+  </div>
 </main>
 <script>
 const neutral=()=>({buttons:0,hat:8,lx:128,ly:128,rx:128,ry:128});
 const touch=neutral(), physical=neutral();
 const activeSticks={lx:false,rx:false};
 const dirs=new Set();
-let ws,connected=false,lastSent="",physicalConnected=false,wsFailures=0,useHttp=false,httpBusy=false;
+let ws,connected=false,lastSent="",physicalConnected=false,wsFailures=0,useHttp=false,httpBusy=false,editing=false;
 const dot=document.getElementById("dot"),statusEl=document.getElementById("status"),gpEl=document.getElementById("gp");
 function connect(){
   if(useHttp)return;
@@ -247,8 +260,8 @@ function pressButton(el,on){
   if(on&&navigator.vibrate)navigator.vibrate(8);
 }
 for(const b of document.querySelectorAll("button[data-bit]")){
-  b.addEventListener("pointerdown",e=>{e.preventDefault();b.setPointerCapture(e.pointerId);pressButton(b,true)});
-  const off=e=>{e.preventDefault();pressButton(b,false)};
+  b.addEventListener("pointerdown",e=>{if(editing)return;e.preventDefault();b.setPointerCapture(e.pointerId);pressButton(b,true)});
+  const off=e=>{if(editing)return;e.preventDefault();pressButton(b,false)};
   b.addEventListener("pointerup",off);b.addEventListener("pointercancel",off);b.addEventListener("lostpointercapture",()=>pressButton(b,false));
 }
 function updateHat(){
@@ -256,18 +269,38 @@ function updateHat(){
   touch.hat=u&&r?1:r&&d?3:d&&l?5:l&&u?7:u?0:r?2:d?4:l?6:8;send();
 }
 for(const b of document.querySelectorAll("button[data-dir]")){
-  b.addEventListener("pointerdown",e=>{e.preventDefault();b.setPointerCapture(e.pointerId);dirs.add(b.dataset.dir);b.classList.add("down");updateHat()});
-  const off=e=>{e.preventDefault();dirs.delete(b.dataset.dir);b.classList.remove("down");updateHat()};
+  b.addEventListener("pointerdown",e=>{if(editing)return;e.preventDefault();b.setPointerCapture(e.pointerId);dirs.add(b.dataset.dir);b.classList.add("down");updateHat()});
+  const off=e=>{if(editing)return;e.preventDefault();dirs.delete(b.dataset.dir);b.classList.remove("down");updateHat()};
   b.addEventListener("pointerup",off);b.addEventListener("pointercancel",off);b.addEventListener("lostpointercapture",off);
 }
 for(const zone of document.querySelectorAll(".side")){
   const stick=zone.querySelector(".stick"),nub=stick.querySelector(".nub"),x=stick.dataset.x,y=stick.dataset.y;let pointer=null,baseX=0,baseY=0;
   const move=e=>{const max=stick.getBoundingClientRect().width*.31;let dx=e.clientX-baseX,dy=e.clientY-baseY,d=Math.hypot(dx,dy);if(d>max){dx=dx/d*max;dy=dy/d*max}nub.style.transform=`translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px))`;touch[x]=Math.round(128+dx/max*127);touch[y]=Math.round(128+dy/max*127);send()};
-  zone.addEventListener("pointerdown",e=>{if(pointer!==null||e.target.closest("button,.dpad,.face,.shoulders"))return;e.preventDefault();pointer=e.pointerId;baseX=e.clientX;baseY=e.clientY;stick.style.left=`${baseX}px`;stick.style.top=`${baseY}px`;stick.classList.add("active");activeSticks[x]=true;zone.setPointerCapture(pointer);move(e)});
+  zone.addEventListener("pointerdown",e=>{if(editing||pointer!==null||e.target.closest("button,.dpad,.face,.shoulders"))return;e.preventDefault();pointer=e.pointerId;baseX=e.clientX;baseY=e.clientY;stick.style.left=`${baseX}px`;stick.style.top=`${baseY}px`;stick.classList.add("active");activeSticks[x]=true;zone.setPointerCapture(pointer);move(e)});
   zone.addEventListener("pointermove",e=>{if(e.pointerId===pointer)move(e)});
   const end=e=>{if(e.pointerId!==pointer)return;pointer=null;activeSticks[x]=false;stick.classList.remove("active");nub.style.transform="translate(-50%,-50%)";touch[x]=128;touch[y]=128;send()};
   zone.addEventListener("pointerup",end);zone.addEventListener("pointercancel",end);zone.addEventListener("lostpointercapture",end);
 }
+const movable=[...document.querySelectorAll("[data-move]")];
+const layoutKey=()=>`switchpad-layout-v1-${matchMedia("(orientation:portrait)").matches?"portrait":"landscape"}`;
+function setOffset(el,x,y){el.dataset.moveX=String(Math.round(x));el.dataset.moveY=String(Math.round(y));el.style.translate=`${Math.round(x)}px ${Math.round(y)}px`}
+function readLayout(){return Object.fromEntries(movable.map(el=>[el.dataset.move,{x:Number(el.dataset.moveX)||0,y:Number(el.dataset.moveY)||0}]))}
+function applyLayout(layout={}){for(const el of movable){const p=layout[el.dataset.move]||{x:0,y:0};setOffset(el,p.x,p.y)}}
+function loadLayout(){try{applyLayout(JSON.parse(localStorage.getItem(layoutKey())||"{}"))}catch(e){applyLayout()}}
+let editSnapshot={};
+function finishEdit(){editing=false;document.body.classList.remove("editing")}
+document.getElementById("editLayout").addEventListener("click",()=>{editSnapshot=readLayout();Object.assign(touch,neutral());dirs.clear();send(true);editing=true;document.body.classList.add("editing")});
+document.getElementById("resetLayout").addEventListener("click",()=>applyLayout());
+document.getElementById("cancelLayout").addEventListener("click",()=>{applyLayout(editSnapshot);finishEdit()});
+document.getElementById("saveLayout").addEventListener("click",()=>{try{localStorage.setItem(layoutKey(),JSON.stringify(readLayout()))}catch(e){}finishEdit()});
+for(const el of movable){
+  let pointer=null,startX=0,startY=0,originX=0,originY=0;
+  el.addEventListener("pointerdown",e=>{if(!editing||pointer!==null)return;e.preventDefault();e.stopPropagation();pointer=e.pointerId;startX=e.clientX;startY=e.clientY;originX=Number(el.dataset.moveX)||0;originY=Number(el.dataset.moveY)||0;el.setPointerCapture(pointer)});
+  el.addEventListener("pointermove",e=>{if(e.pointerId!==pointer)return;let x=originX+e.clientX-startX,y=originY+e.clientY-startY;setOffset(el,x,y);const r=el.getBoundingClientRect(),pad=6;if(r.left<pad)x+=pad-r.left;if(r.right>innerWidth-pad)x-=r.right-(innerWidth-pad);if(r.top<pad)y+=pad-r.top;if(r.bottom>innerHeight-pad)y-=r.bottom-(innerHeight-pad);setOffset(el,x,y)});
+  const end=e=>{if(e.pointerId===pointer)pointer=null};el.addEventListener("pointerup",end);el.addEventListener("pointercancel",end);el.addEventListener("lostpointercapture",end);
+}
+loadLayout();
+window.addEventListener("orientationchange",()=>setTimeout(()=>{if(!editing)loadLayout()},150));
 function pressed(g,i){return !!g.buttons[i]&&(g.buttons[i].pressed||g.buttons[i].value>.5)}
 function pollGamepads(){
   const pads=navigator.getGamepads?[...navigator.getGamepads()].filter(Boolean):[];physicalConnected=pads.length>0;Object.assign(physical,neutral());
