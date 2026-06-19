@@ -158,6 +158,7 @@ button{font:inherit;color:inherit;touch-action:none;cursor:pointer}
 .dot{width:9px;height:9px;flex:none;border-radius:50%;background:#e05555;box-shadow:0 0 0 3px #e0555525}.dot.ok{background:#24d6cf;box-shadow:0 0 0 3px #24d6cf28}
 .layout-tools{position:fixed;z-index:12;right:max(10px,env(safe-area-inset-right));bottom:max(10px,env(safe-area-inset-bottom));display:flex;gap:7px}
 .layout-tools button{position:relative;width:38px;height:38px;display:grid;place-items:center;border:1px solid #4b5561;border-radius:7px;background:#20262d;box-shadow:0 4px 10px #0008}
+.layout-tools button:disabled{opacity:.35;cursor:default}
 .layout-tools svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .player-select{display:none}
 .edit-actions{display:none;gap:7px}.editing .edit-actions{display:flex}.editing #editLayout{display:none}
@@ -173,7 +174,14 @@ button.down,button:active{background:#3b4652!important;box-shadow:inset 0 2px 7p
  .dpad{left:50%;bottom:8%;width:clamp(122px,38vw,174px);transform:translateX(-50%)}.face{right:50%;top:18%;width:clamp(142px,40vw,188px);transform:translateX(50%)}
  .statusbar.physical{max-width:76%;font-size:11px}
 }
-@media(orientation:landscape) and (max-height:430px){.statusbar.connection{display:none}.stick{width:clamp(104px,24vh,132px)}.face{width:clamp(146px,40vh,176px)}.dpad{width:clamp(122px,36vh,158px)}.face{top:25%}.dpad{bottom:4%}.shoulders button{height:38px}.utility button{height:38px}.statusbar.physical{bottom:4px}}
+@media(orientation:landscape) and (max-width:900px) and (max-height:430px){
+ .statusbar.connection{display:none}.stick{width:clamp(96px,25vh,116px)}
+ .utility{top:max(8px,env(safe-area-inset-top));gap:6px}.utility button{width:38px;height:34px;font-size:12px}
+ .shoulders{top:max(8px,env(safe-area-inset-top));gap:4px}.shoulders button{width:58px;height:31px;font-size:13px}
+ .face{top:31%;width:clamp(126px,34vh,142px)}.face button{width:clamp(46px,12vh,52px);font-size:18px}
+ .dpad{bottom:6%;width:clamp(108px,30vh,126px)}.dpad button:after{border-width:6px}
+ .statusbar.physical{bottom:3px;max-width:28%}.layout-tools{bottom:max(6px,env(safe-area-inset-bottom))}
+}
 </style>
 </head>
 <body>
@@ -207,6 +215,7 @@ button.down,button:active{background:#3b4652!important;box-shadow:inset 0 2px 7p
   <div class="layout-tools">
     <button id="editLayout" aria-label="Edit layout" title="Edit layout"><svg viewBox="0 0 24 24"><path d="M21.2 6.8a2.1 2.1 0 0 0-4-4L3.8 16.2a2 2 0 0 0-.5.8L2 21.4a.5.5 0 0 0 .6.6L7 20.7a2 2 0 0 0 .8-.5z"/><path d="m15 5 4 4"/></svg></button>
     <div class="edit-actions">
+      <button id="undoLayout" aria-label="Undo layout change" title="Undo"><svg viewBox="0 0 24 24"><path d="M9 7 4 12l5 5"/><path d="M4 12h9a7 7 0 0 1 7 7"/></svg></button>
       <button id="resetLayout" aria-label="Reset layout" title="Reset to default"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></button>
       <button id="cancelLayout" aria-label="Cancel editing" title="Cancel"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
       <button id="saveLayout" aria-label="Save layout" title="Save layout"><svg viewBox="0 0 24 24"><path d="m20 6-11 11-5-5"/></svg></button>
@@ -278,26 +287,31 @@ function readLayout(){return Object.fromEntries(movable.map(el=>[el.dataset.move
 function applyLayout(layout={}){for(const el of movable){const p=layout[el.dataset.move]||{x:0,y:0,w:0,h:0};setOffset(el,p.x,p.y);setSize(el,p.w,p.h)}positionResizeHandle()}
 function loadLayout(){try{applyLayout(JSON.parse(localStorage.getItem(layoutKey())||"{}"))}catch(e){applyLayout()}}
 const resizeHandle=document.getElementById("resizeHandle");
-let editSnapshot={},selected=null;
+const undoButton=document.getElementById("undoLayout");
+let editSnapshot={},undoHistory=[],selected=null;
+function updateUndo(){undoButton.disabled=undoHistory.length===0}
+function pushUndo(){undoHistory.push(readLayout());if(undoHistory.length>30)undoHistory.shift();updateUndo()}
 function selectControl(el){if(selected)selected.classList.remove("selected");selected=el;if(selected)selected.classList.add("selected");positionResizeHandle()}
 function positionResizeHandle(){if(!editing||!selected){resizeHandle.classList.remove("active");return}const r=selected.getBoundingClientRect();resizeHandle.style.left=`${r.right-15}px`;resizeHandle.style.top=`${r.bottom-15}px`;resizeHandle.classList.add("active")}
 function finishEdit(){selectControl(null);editing=false;document.body.classList.remove("editing")}
-document.getElementById("editLayout").addEventListener("click",()=>{editSnapshot=readLayout();Object.assign(touch,neutral());dirs.clear();send(true);editing=true;document.body.classList.add("editing");selectControl(document.querySelector('[data-move="face"]'))});
-document.getElementById("resetLayout").addEventListener("click",()=>applyLayout());
+document.getElementById("editLayout").addEventListener("click",()=>{editSnapshot=readLayout();undoHistory=[];updateUndo();Object.assign(touch,neutral());dirs.clear();send(true);editing=true;document.body.classList.add("editing");selectControl(document.querySelector('[data-move="face"]'))});
+undoButton.addEventListener("click",()=>{if(!undoHistory.length)return;applyLayout(undoHistory.pop());updateUndo()});
+document.getElementById("resetLayout").addEventListener("click",()=>{pushUndo();applyLayout()});
 document.getElementById("cancelLayout").addEventListener("click",()=>{applyLayout(editSnapshot);finishEdit()});
 document.getElementById("saveLayout").addEventListener("click",()=>{try{localStorage.setItem(layoutKey(),JSON.stringify(readLayout()))}catch(e){}finishEdit()});
 for(const el of movable){
-  let pointer=null,startX=0,startY=0,originX=0,originY=0;
-  el.addEventListener("pointerdown",e=>{if(!editing||pointer!==null)return;e.preventDefault();e.stopPropagation();selectControl(el);pointer=e.pointerId;startX=e.clientX;startY=e.clientY;originX=Number(el.dataset.moveX)||0;originY=Number(el.dataset.moveY)||0;el.setPointerCapture(pointer)});
-  el.addEventListener("pointermove",e=>{if(e.pointerId!==pointer)return;let x=originX+e.clientX-startX,y=originY+e.clientY-startY;setOffset(el,x,y);const r=el.getBoundingClientRect(),pad=6;if(r.left<pad)x+=pad-r.left;if(r.right>innerWidth-pad)x-=r.right-(innerWidth-pad);if(r.top<pad)y+=pad-r.top;if(r.bottom>innerHeight-pad)y-=r.bottom-(innerHeight-pad);setOffset(el,x,y);positionResizeHandle()});
+  let pointer=null,startX=0,startY=0,originX=0,originY=0,changed=false;
+  el.addEventListener("pointerdown",e=>{if(!editing||pointer!==null)return;e.preventDefault();e.stopPropagation();selectControl(el);pointer=e.pointerId;changed=false;startX=e.clientX;startY=e.clientY;originX=Number(el.dataset.moveX)||0;originY=Number(el.dataset.moveY)||0;el.setPointerCapture(pointer)});
+  el.addEventListener("pointermove",e=>{if(e.pointerId!==pointer)return;if(!changed){pushUndo();changed=true}let x=originX+e.clientX-startX,y=originY+e.clientY-startY;setOffset(el,x,y);const r=el.getBoundingClientRect(),pad=6;if(r.left<pad)x+=pad-r.left;if(r.right>innerWidth-pad)x-=r.right-(innerWidth-pad);if(r.top<pad)y+=pad-r.top;if(r.bottom>innerHeight-pad)y-=r.bottom-(innerHeight-pad);setOffset(el,x,y);positionResizeHandle()});
   const end=e=>{if(e.pointerId===pointer)pointer=null};el.addEventListener("pointerup",end);el.addEventListener("pointercancel",end);el.addEventListener("lostpointercapture",end);
 }
 {
-  let pointer=null,startX=0,startY=0,startW=0,startH=0;
-  resizeHandle.addEventListener("pointerdown",e=>{if(!editing||!selected)return;e.preventDefault();e.stopPropagation();pointer=e.pointerId;startX=e.clientX;startY=e.clientY;const r=selected.getBoundingClientRect();startW=r.width;startH=r.height;resizeHandle.setPointerCapture(pointer)});
-  resizeHandle.addEventListener("pointermove",e=>{if(e.pointerId!==pointer||!selected)return;setSize(selected,Math.max(30,startW+e.clientX-startX),Math.max(30,startH+e.clientY-startY));positionResizeHandle()});
+  let pointer=null,startX=0,startY=0,startW=0,startH=0,changed=false;
+  resizeHandle.addEventListener("pointerdown",e=>{if(!editing||!selected)return;e.preventDefault();e.stopPropagation();pointer=e.pointerId;changed=false;startX=e.clientX;startY=e.clientY;const r=selected.getBoundingClientRect();startW=r.width;startH=r.height;resizeHandle.setPointerCapture(pointer)});
+  resizeHandle.addEventListener("pointermove",e=>{if(e.pointerId!==pointer||!selected)return;if(!changed){pushUndo();changed=true}setSize(selected,Math.max(30,startW+e.clientX-startX),Math.max(30,startH+e.clientY-startY));positionResizeHandle()});
   const end=e=>{if(e.pointerId===pointer)pointer=null};resizeHandle.addEventListener("pointerup",end);resizeHandle.addEventListener("pointercancel",end);resizeHandle.addEventListener("lostpointercapture",end);
 }
+updateUndo();
 loadLayout();
 window.addEventListener("orientationchange",()=>setTimeout(()=>{if(!editing)loadLayout();else positionResizeHandle()},150));
 function pressed(g,i){return !!g.buttons[i]&&(g.buttons[i].pressed||g.buttons[i].value>.5)}
