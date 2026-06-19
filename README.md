@@ -31,7 +31,7 @@ The simplest setup needs no separate virtual-gamepad app:
 
 The layout responds to phone/iPad size and orientation. Touch and physical-controller state are merged, so either input method can be used without changing modes. Controller compatibility still depends on iOS/iPadOS and Safari exposing that device through the standard Gamepad API; unusual generic pads may use a nonstandard button order.
 
-Tap the pencil in the lower-right corner to edit the layout. Drag the center buttons, shoulder groups, D-pad, face-button group, or any individual A/B/X/Y button. The selected item has a turquoise corner handle that changes its width and height. Undo reverses moves, resizes, and Reset actions one step at a time; Cancel discards the entire edit, and Save stores separate portrait and landscape layouts locally on that device. Short iPhone landscape screens use a more compact layout while iPad sizing remains unchanged.
+Tap the pencil in the lower-right corner to edit the layout. Every button can be moved and resized independently, while the utility, shoulder, and face groups can still be moved as units. The selected item has a turquoise corner handle that changes its width and height. The crossed-arrows control swaps which side drives the left and right analog sticks. Undo reverses moves, resizes, swaps, and Reset actions one step at a time; Cancel discards the entire edit, and Save stores separate portrait and landscape layouts locally on that device. Short iPhone landscape screens use a more compact layout while iPad sizing remains unchanged.
 
 ## Multi-player status
 

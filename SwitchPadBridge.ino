@@ -147,11 +147,11 @@ button{font:inherit;color:inherit;touch-action:none;cursor:pointer}
 .face button{position:absolute;width:clamp(54px,6.6vw,76px);aspect-ratio:1;border:2px solid #555e68;border-radius:50%;background:#282e35;box-shadow:0 6px 12px #0009;font-size:clamp(19px,2.4vw,28px);font-weight:800}
 #bX{left:50%;top:0;transform:translateX(-50%);color:#4ba9ff}#bB{left:50%;bottom:0;transform:translateX(-50%);color:#ffd83d}#bY{left:0;top:50%;transform:translateY(-50%);color:#43d778}#bA{right:0;top:50%;transform:translateY(-50%);color:#ff625c}
 .dpad{left:max(7vw,env(safe-area-inset-left));bottom:7%;width:clamp(132px,17vw,192px);aspect-ratio:1}
-.dpad button{position:absolute;width:34%;height:42%;border:1px solid #505862;background:#2a3037;font-size:0}
+.dpad button{position:absolute;width:34%;height:42%;border:0;background:#2a3037;font-size:0}
 .dpad button:after{content:"";position:absolute;left:50%;top:50%;width:0;height:0;transform:translate(-50%,-50%);border:8px solid transparent}
 .dpad .up{left:33%;top:0;border-radius:7px 7px 2px 2px}.dpad .south{left:33%;bottom:0;border-radius:2px 2px 7px 7px}.dpad .west{left:0;top:29%;width:42%;height:34%;border-radius:7px 2px 2px 7px}.dpad .east{right:0;top:29%;width:42%;height:34%;border-radius:2px 7px 7px 2px}
 .dpad .up:after{border-bottom-color:#eef2f6;margin-top:-5px}.dpad .south:after{border-top-color:#eef2f6;margin-top:5px}.dpad .west:after{border-right-color:#eef2f6;margin-left:-5px}.dpad .east:after{border-left-color:#eef2f6;margin-left:5px}
-.dpad:after{content:"";position:absolute;pointer-events:none;left:38%;top:38%;width:24%;height:24%;border-radius:50%;background:#242a31;border:1px solid #3e4650}
+.dpad:after{content:"";position:absolute;pointer-events:none;left:38%;top:38%;width:24%;height:24%;border-radius:50%;background:#2a3037}
 .statusbar{position:absolute;z-index:6;display:flex;align-items:center;gap:10px;color:#9ca8b5;font-size:12px}
 .statusbar.connection{top:max(74px,calc(env(safe-area-inset-top) + 62px));left:50%;transform:translateX(-50%)}
 .statusbar.physical{top:auto;bottom:max(10px,env(safe-area-inset-bottom));left:50%;right:auto;transform:translateX(-50%);max-width:34%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -160,6 +160,7 @@ button{font:inherit;color:inherit;touch-action:none;cursor:pointer}
 .layout-tools button{position:relative;width:38px;height:38px;display:grid;place-items:center;border:1px solid #4b5561;border-radius:7px;background:#20262d;box-shadow:0 4px 10px #0008}
 .layout-tools button:disabled{opacity:.35;cursor:default}
 .layout-tools svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.layout-tools #swapSticks.active{background:#176b69;border-color:#24d6cf}
 .player-select{display:none}
 .edit-actions{display:none;gap:7px}.editing .edit-actions{display:flex}.editing #editLayout{display:none}
 .editing [data-move]{outline:1px dashed #24d6cf;outline-offset:5px;cursor:move}.editing [data-move].selected{outline:2px solid #f5f7fa;outline-offset:6px}
@@ -167,6 +168,7 @@ button{font:inherit;color:inherit;touch-action:none;cursor:pointer}
 button.down,button:active{background:#3b4652!important;box-shadow:inset 0 2px 7px #000b!important;transform:translateY(1px)}
 .face button.down,.face button:active{transform:translateY(-50%) scale(.96)}#bX.down,#bX:active,#bB.down,#bB:active{transform:translateX(-50%) scale(.96)}
 .editing #bX:active,.editing #bB:active{transform:translateX(-50%)}.editing #bY:active,.editing #bA:active{transform:translateY(-50%)}
+.editing .side:before{position:absolute;z-index:8;top:92px;width:28px;height:28px;display:grid;place-items:center;border:1px solid #24d6cf;border-radius:50%;color:#24d6cf;font-weight:800;font-size:13px}.editing .left:before{content:"L";left:14px}.editing .right:before{content:"R";right:14px}.editing.sticks-swapped .left:before{content:"R"}.editing.sticks-swapped .right:before{content:"L"}
 @media(orientation:portrait){
  .side{top:76px;width:50%;min-width:0}.utility{top:max(12px,env(safe-area-inset-top));gap:7px}.utility button{width:42px;height:40px;font-size:13px}.statusbar.connection{display:none}
  .shoulders{top:10px;gap:5px}.shoulders button{width:clamp(58px,17vw,92px);height:34px;font-size:13px}.left .shoulders{left:8px}.right .shoulders{right:8px}
@@ -187,13 +189,13 @@ button.down,button:active{background:#3b4652!important;box-shadow:inset 0 2px 7p
 <body>
 <main class="gamepad">
   <div class="utility" data-move="utility">
-    <button data-bit="256" aria-label="Minus">-</button>
-    <button data-bit="4096" aria-label="Home">HOME</button>
-    <button data-bit="8192" aria-label="Capture">CAP</button>
-    <button data-bit="512" aria-label="Plus">+</button>
+    <button data-bit="256" data-move="button-minus" aria-label="Minus">-</button>
+    <button data-bit="4096" data-move="button-home" aria-label="Home">HOME</button>
+    <button data-bit="8192" data-move="button-capture" aria-label="Capture">CAP</button>
+    <button data-bit="512" data-move="button-plus" aria-label="Plus">+</button>
   </div>
   <section class="side left" aria-label="Left controls">
-    <div class="shoulders" data-move="left-shoulders"><button data-bit="16">L</button><button data-bit="64">ZL</button></div>
+    <div class="shoulders" data-move="left-shoulders"><button data-bit="16" data-move="button-l">L</button><button data-bit="64" data-move="button-zl">ZL</button></div>
     <div id="stickL" class="control stick" data-x="lx" data-y="ly" data-click="1024"><div class="nub"></div></div>
     <div class="control dpad" data-move="dpad">
       <button class="up" data-dir="up" aria-label="Up"></button><button class="south" data-dir="down" aria-label="Down"></button>
@@ -201,7 +203,7 @@ button.down,button:active{background:#3b4652!important;box-shadow:inset 0 2px 7p
     </div>
   </section>
   <section class="side right" aria-label="Right controls">
-    <div class="shoulders" data-move="right-shoulders"><button data-bit="32">R</button><button data-bit="128">ZR</button></div>
+    <div class="shoulders" data-move="right-shoulders"><button data-bit="32" data-move="button-r">R</button><button data-bit="128" data-move="button-zr">ZR</button></div>
     <div class="control face" data-move="face">
       <button id="bX" data-bit="8" data-move="button-x">X</button><button id="bB" data-bit="2" data-move="button-b">B</button>
       <button id="bY" data-bit="1" data-move="button-y">Y</button><button id="bA" data-bit="4" data-move="button-a">A</button>
@@ -215,6 +217,7 @@ button.down,button:active{background:#3b4652!important;box-shadow:inset 0 2px 7p
   <div class="layout-tools">
     <button id="editLayout" aria-label="Edit layout" title="Edit layout"><svg viewBox="0 0 24 24"><path d="M21.2 6.8a2.1 2.1 0 0 0-4-4L3.8 16.2a2 2 0 0 0-.5.8L2 21.4a.5.5 0 0 0 .6.6L7 20.7a2 2 0 0 0 .8-.5z"/><path d="m15 5 4 4"/></svg></button>
     <div class="edit-actions">
+      <button id="swapSticks" aria-label="Swap analog stick sides" title="Swap sticks"><svg viewBox="0 0 24 24"><path d="M7 7h11l-3-3"/><path d="m18 7-3 3"/><path d="M17 17H6l3 3"/><path d="m6 17 3-3"/></svg></button>
       <button id="undoLayout" aria-label="Undo layout change" title="Undo"><svg viewBox="0 0 24 24"><path d="M9 7 4 12l5 5"/><path d="M4 12h9a7 7 0 0 1 7 7"/></svg></button>
       <button id="resetLayout" aria-label="Reset layout" title="Reset to default"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></button>
       <button id="cancelLayout" aria-label="Cancel editing" title="Cancel"><svg viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
@@ -228,7 +231,7 @@ const touch=neutral(), physical=neutral();
 const activeSticks={lx:false,rx:false};
 const dirs=new Set();
 let ws,connected=false,lastSent="",physicalConnected=false,wsFailures=0,useHttp=false,httpBusy=false,editing=false;
-let player=0;
+let player=0,sticksSwapped=false;
 const dot=document.getElementById("dot"),statusEl=document.getElementById("status"),gpEl=document.getElementById("gp");
 const playerSelect=document.getElementById("playerSelect");
 function showPlayer(){playerSelect.textContent=`P${player+1}`;playerSelect.title=`Controller ${player+1}`}
@@ -272,9 +275,10 @@ for(const b of document.querySelectorAll("button[data-dir]")){
   b.addEventListener("pointerup",off);b.addEventListener("pointercancel",off);b.addEventListener("lostpointercapture",off);
 }
 for(const zone of document.querySelectorAll(".side")){
-  const stick=zone.querySelector(".stick"),nub=stick.querySelector(".nub"),x=stick.dataset.x,y=stick.dataset.y;let pointer=null,baseX=0,baseY=0;
+  const stick=zone.querySelector(".stick"),nub=stick.querySelector(".nub"),isLeft=zone.classList.contains("left");let pointer=null,baseX=0,baseY=0,x="lx",y="ly";
+  const chooseAxes=()=>{const rightStick=isLeft?sticksSwapped:!sticksSwapped;x=rightStick?"rx":"lx";y=rightStick?"ry":"ly"};
   const move=e=>{const max=stick.getBoundingClientRect().width*.31;let dx=e.clientX-baseX,dy=e.clientY-baseY,d=Math.hypot(dx,dy);if(d>max){dx=dx/d*max;dy=dy/d*max}nub.style.transform=`translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px))`;touch[x]=Math.round(128+dx/max*127);touch[y]=Math.round(128+dy/max*127);send()};
-  zone.addEventListener("pointerdown",e=>{if(editing||pointer!==null||e.target.closest("button,.dpad,.face,.shoulders"))return;e.preventDefault();pointer=e.pointerId;baseX=e.clientX;baseY=e.clientY;stick.style.left=`${baseX}px`;stick.style.top=`${baseY}px`;stick.classList.add("active");activeSticks[x]=true;zone.setPointerCapture(pointer);move(e)});
+  zone.addEventListener("pointerdown",e=>{if(editing||pointer!==null||e.target.closest("button,.dpad,.face,.shoulders"))return;e.preventDefault();chooseAxes();pointer=e.pointerId;baseX=e.clientX;baseY=e.clientY;stick.style.left=`${baseX}px`;stick.style.top=`${baseY}px`;stick.classList.add("active");activeSticks[x]=true;zone.setPointerCapture(pointer);move(e)});
   zone.addEventListener("pointermove",e=>{if(e.pointerId===pointer)move(e)});
   const end=e=>{if(e.pointerId!==pointer)return;pointer=null;activeSticks[x]=false;stick.classList.remove("active");nub.style.transform="translate(-50%,-50%)";touch[x]=128;touch[y]=128;send()};
   zone.addEventListener("pointerup",end);zone.addEventListener("pointercancel",end);zone.addEventListener("lostpointercapture",end);
@@ -283,10 +287,12 @@ const movable=[...document.querySelectorAll("[data-move]")];
 const layoutKey=()=>`switchpad-layout-v1-${matchMedia("(orientation:portrait)").matches?"portrait":"landscape"}`;
 function setOffset(el,x,y){el.dataset.moveX=String(Math.round(x));el.dataset.moveY=String(Math.round(y));el.style.translate=`${Math.round(x)}px ${Math.round(y)}px`}
 function setSize(el,w,h){if(w){el.dataset.sizeW=String(Math.round(w));el.style.width=`${Math.round(w)}px`}else{delete el.dataset.sizeW;el.style.removeProperty("width")}if(h){el.dataset.sizeH=String(Math.round(h));el.style.height=`${Math.round(h)}px`}else{delete el.dataset.sizeH;el.style.removeProperty("height")}}
-function readLayout(){return Object.fromEntries(movable.map(el=>[el.dataset.move,{x:Number(el.dataset.moveX)||0,y:Number(el.dataset.moveY)||0,w:Number(el.dataset.sizeW)||0,h:Number(el.dataset.sizeH)||0}]))}
-function applyLayout(layout={}){for(const el of movable){const p=layout[el.dataset.move]||{x:0,y:0,w:0,h:0};setOffset(el,p.x,p.y);setSize(el,p.w,p.h)}positionResizeHandle()}
+function setStickSwap(value){sticksSwapped=!!value;document.body.classList.toggle("sticks-swapped",sticksSwapped);swapButton.classList.toggle("active",sticksSwapped)}
+function readLayout(){const layout=Object.fromEntries(movable.map(el=>[el.dataset.move,{x:Number(el.dataset.moveX)||0,y:Number(el.dataset.moveY)||0,w:Number(el.dataset.sizeW)||0,h:Number(el.dataset.sizeH)||0}]));layout.__sticksSwapped=sticksSwapped;return layout}
+function applyLayout(layout={}){for(const el of movable){const p=layout[el.dataset.move]||{x:0,y:0,w:0,h:0};setOffset(el,p.x,p.y);setSize(el,p.w,p.h)}setStickSwap(layout.__sticksSwapped);positionResizeHandle()}
 function loadLayout(){try{applyLayout(JSON.parse(localStorage.getItem(layoutKey())||"{}"))}catch(e){applyLayout()}}
 const resizeHandle=document.getElementById("resizeHandle");
+const swapButton=document.getElementById("swapSticks");
 const undoButton=document.getElementById("undoLayout");
 let editSnapshot={},undoHistory=[],selected=null;
 function updateUndo(){undoButton.disabled=undoHistory.length===0}
@@ -295,6 +301,7 @@ function selectControl(el){if(selected)selected.classList.remove("selected");sel
 function positionResizeHandle(){if(!editing||!selected){resizeHandle.classList.remove("active");return}const r=selected.getBoundingClientRect();resizeHandle.style.left=`${r.right-15}px`;resizeHandle.style.top=`${r.bottom-15}px`;resizeHandle.classList.add("active")}
 function finishEdit(){selectControl(null);editing=false;document.body.classList.remove("editing")}
 document.getElementById("editLayout").addEventListener("click",()=>{editSnapshot=readLayout();undoHistory=[];updateUndo();Object.assign(touch,neutral());dirs.clear();send(true);editing=true;document.body.classList.add("editing");selectControl(document.querySelector('[data-move="face"]'))});
+swapButton.addEventListener("click",()=>{pushUndo();setStickSwap(!sticksSwapped)});
 undoButton.addEventListener("click",()=>{if(!undoHistory.length)return;applyLayout(undoHistory.pop());updateUndo()});
 document.getElementById("resetLayout").addEventListener("click",()=>{pushUndo();applyLayout()});
 document.getElementById("cancelLayout").addEventListener("click",()=>{applyLayout(editSnapshot);finishEdit()});
