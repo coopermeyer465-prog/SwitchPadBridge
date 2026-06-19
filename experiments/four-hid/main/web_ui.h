@@ -135,9 +135,11 @@ const neutral=()=>({buttons:0,hat:8,lx:128,ly:128,rx:128,ry:128});
 const touch=neutral(),physical=neutral(),desktop=neutral();
 const activeSticks={lx:false,rx:false},desktopAxes={lx:false,rx:false};
 const dirs=new Set();
+const minimumTapMs=50;
 let ws,connected=false,lastSent="",physicalConnected=false,useHttp=true,httpBusy=false,pendingPayload="",editing=false,lastWireMs=0,sendTimer=0,claimed=false;
 let player=0,sticksSwapped=false,desktopMode=false,mouseVX=0,mouseVY=0;
 const desktopKeys=new Set(),desktopMouseButtons=new Set();
+const desktopMouseDownAt=new Map(),desktopMouseReleaseTimers=new Map();
 const dot=document.getElementById("dot"),statusEl=document.getElementById("status"),gpEl=document.getElementById("gp");
 const playerSelect=document.getElementById("playerSelect");
 const gamepadEl=document.querySelector(".gamepad"),photoInput=document.getElementById("backgroundPhoto"),chooseBackground=document.getElementById("chooseBackground"),removeBackground=document.getElementById("removeBackground");
@@ -238,7 +240,7 @@ function updateDesktopInput(urgent=false){
   const left=desktopKeys.has(desktopMapping.keys.leftLeft),right=desktopKeys.has(desktopMapping.keys.leftRight),up=desktopKeys.has(desktopMapping.keys.leftUp),down=desktopKeys.has(desktopMapping.keys.leftDown);desktopAxes.lx=left||right||up||down;desktop.lx=128+(right?127:0)-(left?127:0);desktop.ly=128+(down?127:0)-(up?127:0);
   const du=desktopKeys.has(desktopMapping.keys.dpadUp),dd=desktopKeys.has(desktopMapping.keys.dpadDown),dl=desktopKeys.has(desktopMapping.keys.dpadLeft),dr=desktopKeys.has(desktopMapping.keys.dpadRight);desktop.hat=du&&dr?1:dr&&dd?3:dd&&dl?5:dl&&du?7:du?0:dr?2:dd?4:dl?6:8;syncDesktopVisuals();send(urgent);
 }
-function clearDesktopInput(){desktopKeys.clear();desktopMouseButtons.clear();mouseVX=mouseVY=0;Object.assign(desktop,neutral());desktopAxes.lx=desktopAxes.rx=false;syncDesktopVisuals();send(true)}
+function clearDesktopInput(){for(const timer of desktopMouseReleaseTimers.values())clearTimeout(timer);desktopMouseReleaseTimers.clear();desktopMouseDownAt.clear();desktopKeys.clear();desktopMouseButtons.clear();mouseVX=mouseVY=0;Object.assign(desktop,neutral());desktopAxes.lx=desktopAxes.rx=false;syncDesktopVisuals();send(true)}
 async function enterDesktopMode(){
   if(editing)return;
   try{const requestFullscreen=gamepadEl.requestFullscreen||gamepadEl.webkitRequestFullscreen;if(requestFullscreen){const result=requestFullscreen.call(gamepadEl);if(result&&result.then)await result}desktopMode=true;document.body.classList.add("desktop-mode");const requestLock=gamepadEl.requestPointerLock||gamepadEl.webkitRequestPointerLock;if(requestLock){const result=requestLock.call(gamepadEl);if(result&&result.catch)result.catch(()=>{})}}catch(e){statusEl.textContent="fullscreen unavailable"}
@@ -258,8 +260,8 @@ document.addEventListener("pointerlockchange",()=>{if(!pointerLocked()){
 document.addEventListener("keydown",e=>{if(captureAction){e.preventDefault();desktopMapping.keys[captureAction]=e.code;captureAction="";saveDesktopMapping();updateMappingHints();renderKeymap();return}if(!desktopMode||!Object.values(desktopMapping.keys).includes(e.code)||e.target===photoInput)return;e.preventDefault();if(e.repeat)return;desktopKeys.add(e.code);updateDesktopInput(true)});
 document.addEventListener("keyup",e=>{if(!Object.values(desktopMapping.keys).includes(e.code))return;if(desktopMode)e.preventDefault();desktopKeys.delete(e.code);updateDesktopInput(true)});
 document.addEventListener("mousemove",e=>{if(!desktopMode||!pointerLocked()||desktopMapping.mouseAxis==="off")return;mouseVX=Math.max(-127,Math.min(127,mouseVX+e.movementX*desktopMapping.sensitivity));mouseVY=Math.max(-127,Math.min(127,mouseVY+e.movementY*desktopMapping.sensitivity));const left=desktopMapping.mouseAxis==="left";desktopAxes[left?"lx":"rx"]=true;desktop[left?"lx":"rx"]=Math.round(128+mouseVX);desktop[left?"ly":"ry"]=Math.round(128+mouseVY);syncDesktopVisuals();send()});
-document.addEventListener("mousedown",e=>{if(!desktopMode||!pointerLocked())return;e.preventDefault();e.stopPropagation();desktopMouseButtons.add(e.button);updateDesktopInput(true)},true);
-document.addEventListener("mouseup",e=>{if(!desktopMode)return;e.preventDefault();desktopMouseButtons.delete(e.button);updateDesktopInput(true)},true);
+document.addEventListener("mousedown",e=>{if(!desktopMode||!pointerLocked())return;e.preventDefault();e.stopPropagation();clearTimeout(desktopMouseReleaseTimers.get(e.button));desktopMouseReleaseTimers.delete(e.button);desktopMouseDownAt.set(e.button,performance.now());desktopMouseButtons.add(e.button);updateDesktopInput(true)},true);
+document.addEventListener("mouseup",e=>{if(!desktopMode)return;e.preventDefault();const release=()=>{desktopMouseReleaseTimers.delete(e.button);desktopMouseDownAt.delete(e.button);desktopMouseButtons.delete(e.button);updateDesktopInput(true)};const delay=Math.max(0,minimumTapMs-(performance.now()-(desktopMouseDownAt.get(e.button)||0)));if(delay){clearTimeout(desktopMouseReleaseTimers.get(e.button));desktopMouseReleaseTimers.set(e.button,setTimeout(release,delay))}else release()},true);
 window.addEventListener("blur",clearDesktopInput);
 function desktopFrame(){const left=desktopMapping.mouseAxis==="left",axis=left?"lx":"rx";if(desktopMode&&pointerLocked()&&desktopAxes[axis]){mouseVX*=.82;mouseVY*=.82;if(Math.abs(mouseVX)<.7)mouseVX=0;if(Math.abs(mouseVY)<.7)mouseVY=0;desktop[axis]=Math.round(128+mouseVX);desktop[left?"ly":"ry"]=Math.round(128+mouseVY);desktopAxes[axis]=mouseVX!==0||mouseVY!==0;syncDesktopVisuals();send()}requestAnimationFrame(desktopFrame)}desktopFrame();
 function pressButton(el,on){
@@ -267,10 +269,10 @@ function pressButton(el,on){
   if(on&&navigator.vibrate)navigator.vibrate(8);
 }
 for(const b of document.querySelectorAll("button[data-bit]")){
-  let lastPointer=0;
-  b.addEventListener("pointerdown",e=>{if(editing)return;e.preventDefault();lastPointer=performance.now();b.setPointerCapture(e.pointerId);pressButton(b,true)});
-  const off=e=>{if(editing)return;e.preventDefault();pressButton(b,false)};
-  b.addEventListener("pointerup",off);b.addEventListener("pointercancel",off);b.addEventListener("lostpointercapture",()=>pressButton(b,false));
+  let lastPointer=0,releaseTimer=0,pointerPressed=false;
+  b.addEventListener("pointerdown",e=>{if(editing)return;e.preventDefault();clearTimeout(releaseTimer);lastPointer=performance.now();pointerPressed=true;b.setPointerCapture(e.pointerId);pressButton(b,true)});
+  const off=e=>{if(editing||!pointerPressed)return;if(e)e.preventDefault();pointerPressed=false;const release=()=>{releaseTimer=0;if(!pointerPressed)pressButton(b,false)};const delay=Math.max(0,minimumTapMs-(performance.now()-lastPointer));if(delay)releaseTimer=setTimeout(release,delay);else release()};
+  b.addEventListener("pointerup",off);b.addEventListener("pointercancel",off);b.addEventListener("lostpointercapture",off);
   b.addEventListener("click",()=>{if(editing||performance.now()-lastPointer<500)return;pressButton(b,true);setTimeout(()=>pressButton(b,false),85)});
 }
 function updateHat(){
@@ -278,9 +280,9 @@ function updateHat(){
   touch.hat=u&&r?1:r&&d?3:d&&l?5:l&&u?7:u?0:r?2:d?4:l?6:8;send(true);
 }
 for(const b of document.querySelectorAll("button[data-dir]")){
-  let lastPointer=0;
-  b.addEventListener("pointerdown",e=>{if(editing)return;e.preventDefault();lastPointer=performance.now();b.setPointerCapture(e.pointerId);dirs.add(b.dataset.dir);b.classList.add("down");updateHat()});
-  const off=e=>{if(editing)return;e.preventDefault();dirs.delete(b.dataset.dir);b.classList.remove("down");updateHat()};
+  let lastPointer=0,releaseTimer=0,pointerPressed=false;
+  b.addEventListener("pointerdown",e=>{if(editing)return;e.preventDefault();clearTimeout(releaseTimer);lastPointer=performance.now();pointerPressed=true;b.setPointerCapture(e.pointerId);dirs.add(b.dataset.dir);b.classList.add("down");updateHat()});
+  const off=e=>{if(editing||!pointerPressed)return;if(e)e.preventDefault();pointerPressed=false;const release=()=>{releaseTimer=0;if(pointerPressed)return;dirs.delete(b.dataset.dir);b.classList.remove("down");updateHat()};const delay=Math.max(0,minimumTapMs-(performance.now()-lastPointer));if(delay)releaseTimer=setTimeout(release,delay);else release()};
   b.addEventListener("pointerup",off);b.addEventListener("pointercancel",off);b.addEventListener("lostpointercapture",off);
   b.addEventListener("click",()=>{if(editing||performance.now()-lastPointer<500)return;dirs.add(b.dataset.dir);b.classList.add("down");updateHat();setTimeout(()=>{dirs.delete(b.dataset.dir);b.classList.remove("down");updateHat()},85)});
 }
