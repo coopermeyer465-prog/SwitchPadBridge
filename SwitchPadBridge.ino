@@ -162,6 +162,7 @@ button{font:inherit;color:inherit;touch-action:none;cursor:pointer}
 .layout-tools svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .layout-tools #swapSticks.active{background:#176b69;border-color:#24d6cf}
 .layout-tools #chooseBackground.active{background:#176b69;border-color:#24d6cf}.no-background #removeBackground{display:none}
+.desktop-mode-button{display:none;position:fixed;z-index:12;left:10px;bottom:10px;width:42px;height:42px;place-items:center;border:1px solid #4b5561;border-radius:7px;background:#20262d;box-shadow:0 4px 10px #0008}.desktop-mode-button svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}.desktop-mode .desktop-mode-button{background:#176b69;border-color:#24d6cf}.editing .desktop-mode-button{display:none}
 .player-select{display:none}
 .edit-actions{display:none;gap:7px}.editing .edit-actions{display:flex}.editing #editLayout{display:none}
 .editing [data-move]{outline:1px dashed #24d6cf;outline-offset:5px;cursor:move}.editing [data-move].selected{outline:2px solid #f5f7fa;outline-offset:6px}
@@ -170,6 +171,7 @@ button.down,button:active{background:#3b4652!important;box-shadow:inset 0 2px 7p
 .face button.down,.face button:active{transform:translateY(-50%) scale(.96)}#bX.down,#bX:active,#bB.down,#bB:active{transform:translateX(-50%) scale(.96)}
 .editing #bX:active,.editing #bB:active{transform:translateX(-50%)}.editing #bY:active,.editing #bA:active{transform:translateY(-50%)}
 .stick-indicator{display:none;position:absolute;z-index:8;width:clamp(92px,13vw,146px);aspect-ratio:1;place-items:center;border:2px dashed #24d6cf;border-radius:50%;background:#0b0e1266;color:#24d6cf;font-weight:850;font-size:24px;pointer-events:none}.editing .stick-indicator{display:grid}#leftStickIndicator{left:max(5vw,env(safe-area-inset-left));top:27%}#rightStickIndicator{right:max(6vw,env(safe-area-inset-right));bottom:7%}
+@media(hover:hover) and (pointer:fine){.desktop-mode-button{display:grid}}
 @media(orientation:portrait){
  .side{top:76px;width:50%;min-width:0}.utility{top:max(12px,env(safe-area-inset-top));gap:7px}.utility button{width:42px;height:40px;font-size:13px}.statusbar.connection{display:none}
  .shoulders{top:10px;gap:5px}.shoulders button{width:clamp(58px,17vw,92px);height:34px;font-size:13px}.left .shoulders{left:8px}.right .shoulders{right:8px}
@@ -217,6 +219,7 @@ button.down,button:active{background:#3b4652!important;box-shadow:inset 0 2px 7p
   </section>
   <div class="statusbar connection"><span id="dot" class="dot"></span><span id="status">connecting</span></div>
   <div id="gp" class="statusbar physical">touch controls</div>
+  <button id="desktopMode" class="desktop-mode-button" aria-label="Enter desktop controller mode" title="Desktop controller mode"><svg viewBox="0 0 24 24"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"/></svg></button>
   <button id="playerSelect" class="player-select" aria-label="Select player" title="Select player">P1</button>
   <div id="resizeHandle" class="resize-handle" aria-label="Resize selected control"></div>
   <input id="backgroundPhoto" type="file" accept="image/*" hidden>
@@ -235,11 +238,12 @@ button.down,button:active{background:#3b4652!important;box-shadow:inset 0 2px 7p
 </main>
 <script>
 const neutral=()=>({buttons:0,hat:8,lx:128,ly:128,rx:128,ry:128});
-const touch=neutral(), physical=neutral();
-const activeSticks={lx:false,rx:false};
+const touch=neutral(),physical=neutral(),desktop=neutral();
+const activeSticks={lx:false,rx:false},desktopAxes={lx:false,rx:false};
 const dirs=new Set();
 let ws,connected=false,lastSent="",physicalConnected=false,wsFailures=0,useHttp=false,httpBusy=false,editing=false;
-let player=0,sticksSwapped=false;
+let player=0,sticksSwapped=false,desktopMode=false,mouseVX=0,mouseVY=0;
+const desktopKeys=new Set(),desktopMouseButtons=new Set();
 const dot=document.getElementById("dot"),statusEl=document.getElementById("status"),gpEl=document.getElementById("gp");
 const playerSelect=document.getElementById("playerSelect");
 const gamepadEl=document.querySelector(".gamepad"),photoInput=document.getElementById("backgroundPhoto"),chooseBackground=document.getElementById("chooseBackground"),removeBackground=document.getElementById("removeBackground");
@@ -260,11 +264,11 @@ function connect(){
 }
 connect();
 function merged(){
-  return {buttons:touch.buttons|physical.buttons,hat:touch.hat!==8?touch.hat:physical.hat,
-    lx:activeSticks.lx?touch.lx:physicalConnected?physical.lx:touch.lx,
-    ly:activeSticks.lx?touch.ly:physicalConnected?physical.ly:touch.ly,
-    rx:activeSticks.rx?touch.rx:physicalConnected?physical.rx:touch.rx,
-    ry:activeSticks.rx?touch.ry:physicalConnected?physical.ry:touch.ry};
+  return {buttons:touch.buttons|physical.buttons|desktop.buttons,hat:touch.hat!==8?touch.hat:desktop.hat!==8?desktop.hat:physical.hat,
+    lx:activeSticks.lx?touch.lx:desktopAxes.lx?desktop.lx:physicalConnected?physical.lx:touch.lx,
+    ly:activeSticks.lx?touch.ly:desktopAxes.lx?desktop.ly:physicalConnected?physical.ly:touch.ly,
+    rx:activeSticks.rx?touch.rx:desktopAxes.rx?desktop.rx:physicalConnected?physical.rx:touch.rx,
+    ry:activeSticks.rx?touch.ry:desktopAxes.rx?desktop.ry:physicalConnected?physical.ry:touch.ry};
 }
 function payload(){const s=merged();return `player=${player}&buttons=${s.buttons}&hat=${s.hat}&lx=${s.lx}&ly=${s.ly}&rx=${s.rx}&ry=${s.ry}`}
 function send(force=false){
@@ -272,6 +276,31 @@ function send(force=false){
   if(connected&&ws?.readyState===WebSocket.OPEN){ws.send(p);lastSent=p;return}
   if(useHttp&&!httpBusy){httpBusy=true;fetch("/api/input",{method:"POST",headers:{"Content-Type":"text/plain"},body:p}).then(r=>{if(!r.ok)throw Error() ;dot.classList.add("ok");statusEl.textContent="connected";lastSent=p}).catch(()=>{dot.classList.remove("ok");statusEl.textContent="reconnecting"}).finally(()=>httpBusy=false)}
 }
+const desktopButton=document.getElementById("desktopMode");
+const desktopKeyBits={Space:4,KeyC:2,KeyR:8,KeyF:1,KeyQ:16,KeyE:32,ShiftLeft:64,ShiftRight:64,ControlLeft:128,ControlRight:128,Backspace:256,Enter:512,KeyZ:1024,KeyX:2048,KeyH:4096,KeyP:8192,KeyK:4,KeyJ:2,KeyI:8,KeyU:1};
+const desktopCodes=new Set([...Object.keys(desktopKeyBits),"KeyW","KeyA","KeyS","KeyD","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"]);
+function pointerLocked(){return (document.pointerLockElement||document.webkitPointerLockElement)===gamepadEl}
+function updateDesktopInput(){
+  let buttons=0;for(const code of desktopKeys)buttons|=desktopKeyBits[code]||0;if(desktopMouseButtons.has(0))buttons|=128;if(desktopMouseButtons.has(2))buttons|=64;desktop.buttons=buttons;
+  const left=desktopKeys.has("KeyA"),right=desktopKeys.has("KeyD"),up=desktopKeys.has("KeyW"),down=desktopKeys.has("KeyS");desktopAxes.lx=left||right||up||down;desktop.lx=128+(right?127:0)-(left?127:0);desktop.ly=128+(down?127:0)-(up?127:0);
+  const du=desktopKeys.has("ArrowUp"),dd=desktopKeys.has("ArrowDown"),dl=desktopKeys.has("ArrowLeft"),dr=desktopKeys.has("ArrowRight");desktop.hat=du&&dr?1:dr&&dd?3:dd&&dl?5:dl&&du?7:du?0:dr?2:dd?4:dl?6:8;send();
+}
+function clearDesktopInput(){desktopKeys.clear();desktopMouseButtons.clear();mouseVX=mouseVY=0;Object.assign(desktop,neutral());desktopAxes.lx=desktopAxes.rx=false;send(true)}
+async function enterDesktopMode(){
+  if(editing)return;
+  try{const requestFullscreen=gamepadEl.requestFullscreen||gamepadEl.webkitRequestFullscreen;if(requestFullscreen){const result=requestFullscreen.call(gamepadEl);if(result&&result.then)await result}desktopMode=true;document.body.classList.add("desktop-mode");const requestLock=gamepadEl.requestPointerLock||gamepadEl.webkitRequestPointerLock;if(requestLock){const result=requestLock.call(gamepadEl);if(result&&result.catch)result.catch(()=>{})}}catch(e){statusEl.textContent="fullscreen unavailable"}
+}
+desktopButton.addEventListener("click",enterDesktopMode);
+document.addEventListener("fullscreenchange",()=>{desktopMode=document.fullscreenElement===gamepadEl;document.body.classList.toggle("desktop-mode",desktopMode);if(!desktopMode)clearDesktopInput()});
+document.addEventListener("webkitfullscreenchange",()=>{desktopMode=document.webkitFullscreenElement===gamepadEl;document.body.classList.toggle("desktop-mode",desktopMode);if(!desktopMode)clearDesktopInput()});
+document.addEventListener("pointerlockchange",()=>{if(!pointerLocked()){mouseVX=mouseVY=0;desktop.rx=desktop.ry=128;desktopAxes.rx=false;send(true)}});
+document.addEventListener("keydown",e=>{if(!desktopMode||!desktopCodes.has(e.code)||e.target===photoInput)return;e.preventDefault();desktopKeys.add(e.code);updateDesktopInput()});
+document.addEventListener("keyup",e=>{if(!desktopCodes.has(e.code))return;if(desktopMode)e.preventDefault();desktopKeys.delete(e.code);updateDesktopInput()});
+document.addEventListener("mousemove",e=>{if(!desktopMode||!pointerLocked())return;mouseVX=Math.max(-127,Math.min(127,mouseVX+e.movementX*2.8));mouseVY=Math.max(-127,Math.min(127,mouseVY+e.movementY*2.8));desktopAxes.rx=true;desktop.rx=Math.round(128+mouseVX);desktop.ry=Math.round(128+mouseVY);send()});
+document.addEventListener("mousedown",e=>{if(!desktopMode||!pointerLocked())return;e.preventDefault();e.stopPropagation();desktopMouseButtons.add(e.button);updateDesktopInput()},true);
+document.addEventListener("mouseup",e=>{if(!desktopMode)return;e.preventDefault();desktopMouseButtons.delete(e.button);updateDesktopInput()},true);
+window.addEventListener("blur",clearDesktopInput);
+function desktopFrame(){if(desktopMode&&pointerLocked()&&desktopAxes.rx){mouseVX*=.72;mouseVY*=.72;if(Math.abs(mouseVX)<.7)mouseVX=0;if(Math.abs(mouseVY)<.7)mouseVY=0;desktop.rx=Math.round(128+mouseVX);desktop.ry=Math.round(128+mouseVY);desktopAxes.rx=mouseVX!==0||mouseVY!==0;send()}requestAnimationFrame(desktopFrame)}desktopFrame();
 function pressButton(el,on){
   const bit=Number(el.dataset.bit);touch.buttons=on?touch.buttons|bit:touch.buttons&~bit;el.classList.toggle("down",on);send();
   if(on&&navigator.vibrate)navigator.vibrate(8);
@@ -351,7 +380,7 @@ function pollGamepads(){
     }
     if(axesPad){const a=axesPad.axes,axis=i=>Math.round(Math.max(-1,Math.min(1,a[i]||0))*127+128);physical.lx=axis(0);physical.ly=axis(1);if(a.length>=4){physical.rx=axis(2);physical.ry=axis(3)}}
     gpEl.textContent=names.join(" + ");
-  }else gpEl.textContent="touch controls";
+  }else gpEl.textContent=desktopMode?"keyboard + mouse":"touch controls";
   send();requestAnimationFrame(pollGamepads);
 }
 window.addEventListener("gamepadconnected",()=>send(true));window.addEventListener("gamepaddisconnected",()=>send(true));pollGamepads();setInterval(()=>send(true),250);

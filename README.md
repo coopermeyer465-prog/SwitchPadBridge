@@ -39,6 +39,25 @@ The four-report-ID experiment was rejected by the Pokken controller profile and 
 
 A separate app only works if it sends input directly to the ESP32. The firmware currently accepts its compact input format over UDP port `7777`; OSC apps such as TouchOSC would require a small OSC parser or a custom bridge.
 
+## Keyboard and mouse
+
+On a computer, click the fullscreen icon in the lower-left corner to enter desktop controller mode. The page uses pointer lock so mouse motion drives the right stick and automatically springs back to center. Press Escape to release the mouse and leave fullscreen.
+
+| Input | Switch control |
+| --- | --- |
+| WASD | Left stick |
+| Mouse | Right stick |
+| Arrow keys | D-pad |
+| Space / C / R / F | A / B / X / Y |
+| Left / right mouse | ZR / ZL |
+| Q / E | L / R |
+| Shift / Control | ZL / ZR |
+| Enter / Backspace | Plus / Minus |
+| H / P | Home / Capture |
+| Z / X | Left / right stick click |
+
+J/K/U/I are alternate B/A/Y/X bindings for emulator-style keyboard layouts. Keyboard mappings activate only inside desktop controller mode, so the page does not capture normal typing outside fullscreen.
+
 ## Build and Flash
 
 ### Arduino IDE
