@@ -136,7 +136,7 @@ const touch=neutral(),physical=neutral(),desktop=neutral();
 const activeSticks={lx:false,rx:false},desktopAxes={lx:false,rx:false};
 const dirs=new Set();
 let ws,connected=false,lastSent="",physicalConnected=false,useHttp=true,httpBusy=false,pendingPayload="",editing=false,lastWireMs=0,sendTimer=0,claimed=false;
-let player=0,sticksSwapped=false,desktopMode=false,mouseVX=0,mouseVY=0;
+let player=0,sticksSwapped=false,desktopMode=false,mouseVX=0,mouseVY=0,lastMouseMoveAt=0;
 const desktopKeys=new Set(),desktopMouseButtons=new Set();
 const dot=document.getElementById("dot"),statusEl=document.getElementById("status"),gpEl=document.getElementById("gp");
 const playerSelect=document.getElementById("playerSelect");
@@ -258,11 +258,11 @@ document.addEventListener("pointerlockchange",()=>{if(!pointerLocked()){
 }});
 document.addEventListener("keydown",e=>{if(captureAction){e.preventDefault();desktopMapping.keys[captureAction]=e.code;captureAction="";saveDesktopMapping();updateMappingHints();renderKeymap();return}if(!desktopMode||!Object.values(desktopMapping.keys).includes(e.code)||e.target===photoInput)return;e.preventDefault();if(e.repeat)return;desktopKeys.add(e.code);updateDesktopInput(true)});
 document.addEventListener("keyup",e=>{if(!Object.values(desktopMapping.keys).includes(e.code))return;if(desktopMode)e.preventDefault();desktopKeys.delete(e.code);updateDesktopInput(true)});
-document.addEventListener("mousemove",e=>{if(!desktopMode||!pointerLocked()||desktopMapping.mouseAxis==="off")return;mouseVX=Math.max(-127,Math.min(127,mouseVX+e.movementX*desktopMapping.sensitivity));mouseVY=Math.max(-127,Math.min(127,mouseVY+e.movementY*desktopMapping.sensitivity));const left=desktopMapping.mouseAxis==="left";desktopAxes[left?"lx":"rx"]=true;desktop[left?"lx":"rx"]=Math.round(128+mouseVX);desktop[left?"ly":"ry"]=Math.round(128+mouseVY);syncDesktopVisuals();send()});
+document.addEventListener("mousemove",e=>{if(!desktopMode||!pointerLocked()||desktopMapping.mouseAxis==="off")return;mouseVX=Math.max(-127,Math.min(127,e.movementX*desktopMapping.sensitivity*2));mouseVY=Math.max(-127,Math.min(127,e.movementY*desktopMapping.sensitivity*2));lastMouseMoveAt=performance.now();const left=desktopMapping.mouseAxis==="left";desktopAxes[left?"lx":"rx"]=true;desktop[left?"lx":"rx"]=Math.round(128+mouseVX);desktop[left?"ly":"ry"]=Math.round(128+mouseVY);syncDesktopVisuals();send(true)});
 document.addEventListener("mousedown",e=>{if(!desktopMode||!pointerLocked())return;e.preventDefault();e.stopPropagation();desktopMouseButtons.add(e.button);updateDesktopInput(true)},true);
 document.addEventListener("mouseup",e=>{if(!desktopMode)return;e.preventDefault();desktopMouseButtons.delete(e.button);updateDesktopInput(true)},true);
 window.addEventListener("blur",clearDesktopInput);
-function desktopFrame(){const left=desktopMapping.mouseAxis==="left",axis=left?"lx":"rx";if(desktopMode&&pointerLocked()&&desktopAxes[axis]){mouseVX*=.82;mouseVY*=.82;if(Math.abs(mouseVX)<.7)mouseVX=0;if(Math.abs(mouseVY)<.7)mouseVY=0;desktop[axis]=Math.round(128+mouseVX);desktop[left?"ly":"ry"]=Math.round(128+mouseVY);desktopAxes[axis]=mouseVX!==0||mouseVY!==0;syncDesktopVisuals();send()}requestAnimationFrame(desktopFrame)}desktopFrame();
+function desktopFrame(){const left=desktopMapping.mouseAxis==="left",axis=left?"lx":"rx";if(desktopMode&&pointerLocked()&&desktopAxes[axis]&&performance.now()-lastMouseMoveAt>20){mouseVX=mouseVY=0;desktop[axis]=desktop[left?"ly":"ry"]=128;desktopAxes[axis]=false;syncDesktopVisuals();send(true)}requestAnimationFrame(desktopFrame)}desktopFrame();
 function pressButton(el,on){
   const bit=Number(el.dataset.bit);touch.buttons=on?touch.buttons|bit:touch.buttons&~bit;el.classList.toggle("down",on);send(true);
   if(on&&navigator.vibrate)navigator.vibrate(8);
@@ -291,7 +291,7 @@ for(const zone of document.querySelectorAll(".side")){
   const move=e=>{const now=performance.now(),max=stick.getBoundingClientRect().width*.31;let dx=e.clientX-baseX,dy=e.clientY-baseY,d=Math.hypot(dx,dy);if(d>max){dx=dx/d*max;dy=dy/d*max;d=max}const dt=Math.max(4,now-lastMoveAt),speed=Math.hypot(e.clientX-lastX,e.clientY-lastY)/dt,base=d/max/.78,jerk=Math.min(.5,speed*.55)*(1-Math.min(1,d/max)),magnitude=Math.min(1,base+jerk),scale=d?magnitude*127/d:0;nub.style.transform=`translate(calc(-50% + ${dx}px),calc(-50% + ${dy}px))`;touch[x]=Math.round(Math.max(1,Math.min(255,128+dx*scale)));touch[y]=Math.round(Math.max(1,Math.min(255,128+dy*scale)));lastX=e.clientX;lastY=e.clientY;lastMoveAt=now;send()};
   zone.addEventListener("pointerdown",e=>{if(editing||pointer!==null||e.target.closest("button,.dpad,.face,.shoulders"))return;e.preventDefault();chooseAxes();pointer=e.pointerId;baseX=lastX=e.clientX;baseY=lastY=e.clientY;lastMoveAt=performance.now();stick.style.left=`${baseX}px`;stick.style.top=`${baseY}px`;stick.classList.add("active");activeSticks[x]=true;zone.setPointerCapture(pointer);move(e)});
   zone.addEventListener("pointermove",e=>{if(e.pointerId===pointer)move(e)});
-  const end=e=>{if(e.pointerId!==pointer)return;pointer=null;activeSticks[x]=false;stick.classList.remove("active");nub.style.transform="translate(-50%,-50%)";touch[x]=128;touch[y]=128;send()};
+  const end=e=>{if(e.pointerId!==pointer)return;pointer=null;activeSticks[x]=false;stick.classList.remove("active");nub.style.transform="translate(-50%,-50%)";touch[x]=128;touch[y]=128;send(true)};
   zone.addEventListener("pointerup",end);zone.addEventListener("pointercancel",end);zone.addEventListener("lostpointercapture",end);
 }
 const movable=[...document.querySelectorAll("[data-move]")];

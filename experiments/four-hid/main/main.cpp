@@ -19,8 +19,7 @@
 #include "web_ui.h"
 
 static constexpr uint8_t kControllerCount = 4;
-static constexpr uint8_t kDigitalQueueDepth = 32;
-static constexpr uint8_t kDigitalEdgeReports = 1;
+static constexpr uint8_t kReportQueueDepth = 64;
 static constexpr uint32_t kInputTimeoutMs = 900;
 static constexpr uint32_t kClientLeaseMs = 15000;
 static const char *kTag = "switchpad-4hid";
@@ -39,15 +38,9 @@ static SwitchReport reports[kControllerCount];
 static uint32_t last_input_ms[kControllerCount];
 static portMUX_TYPE report_lock = portMUX_INITIALIZER_UNLOCKED;
 
-struct DigitalEdge {
-  uint16_t buttons;
-  uint8_t hat;
-  uint8_t reports_remaining;
-};
-
-static DigitalEdge digital_queues[kControllerCount][kDigitalQueueDepth];
-static uint8_t digital_queue_heads[kControllerCount];
-static uint8_t digital_queue_counts[kControllerCount];
+static SwitchReport report_queues[kControllerCount][kReportQueueDepth];
+static uint8_t report_queue_heads[kControllerCount];
+static uint8_t report_queue_counts[kControllerCount];
 
 struct ClientSlot {
   char device_id[40];
@@ -140,21 +133,21 @@ static bool valid_device_id(const char *device_id) {
 static void neutralize(uint8_t player) {
   portENTER_CRITICAL(&report_lock);
   reports[player] = {0, 8, 128, 128, 128, 128, 0};
-  digital_queue_heads[player] = 0;
-  digital_queue_counts[player] = 0;
+  report_queue_heads[player] = 0;
+  report_queue_counts[player] = 0;
   last_input_ms[player] = 0;
   portEXIT_CRITICAL(&report_lock);
 }
 
-static void queue_digital_edge(uint8_t player, uint16_t buttons, uint8_t hat) {
-  uint8_t &count = digital_queue_counts[player];
-  uint8_t &head = digital_queue_heads[player];
-  if (count == kDigitalQueueDepth) {
-    head = (head + 1) % kDigitalQueueDepth;
+static void queue_report(uint8_t player, const SwitchReport &report) {
+  uint8_t &count = report_queue_counts[player];
+  uint8_t &head = report_queue_heads[player];
+  if (count == kReportQueueDepth) {
+    head = (head + 1) % kReportQueueDepth;
     count--;
   }
-  const uint8_t tail = (head + count) % kDigitalQueueDepth;
-  digital_queues[player][tail] = {buttons, hat, kDigitalEdgeReports};
+  const uint8_t tail = (head + count) % kReportQueueDepth;
+  report_queues[player][tail] = report;
   count++;
 }
 
@@ -226,9 +219,7 @@ static int apply_input(const char *body) {
   if (next.hat > 8) next.hat = 8;
   next.vendor = 0;
   portENTER_CRITICAL(&report_lock);
-  if (next.buttons != reports[player].buttons || next.hat != reports[player].hat) {
-    queue_digital_edge(player, next.buttons, next.hat);
-  }
+  if (memcmp(&next, &reports[player], sizeof(next)) != 0) queue_report(player, next);
   reports[player] = next;
   last_input_ms[player] = now_ms();
   portEXIT_CRITICAL(&report_lock);
@@ -383,37 +374,32 @@ static void connect_wifi() {
 }
 
 static void usb_report_task(void *) {
-  uint8_t player = 0;
   while (true) {
     const uint32_t now = xTaskGetTickCount() * portTICK_PERIOD_MS;
-    bool queued_edge = false;
-    portENTER_CRITICAL(&report_lock);
-    if (now - last_input_ms[player] > kInputTimeoutMs) {
-      reports[player] = {0, 8, 128, 128, 128, 128, 0};
-      digital_queue_heads[player] = 0;
-      digital_queue_counts[player] = 0;
-    }
-    SwitchReport report = reports[player];
-    if (digital_queue_counts[player] > 0) {
-      DigitalEdge &edge = digital_queues[player][digital_queue_heads[player]];
-      report.buttons = edge.buttons;
-      report.hat = edge.hat;
-      queued_edge = true;
-    }
-    portEXIT_CRITICAL(&report_lock);
-    const bool sent = tud_mounted() && tud_hid_n_ready(player) && tud_hid_n_report(player, 0, &report, sizeof(report));
-    if (sent && queued_edge) {
+    for (uint8_t player = 0; player < kControllerCount; player++) {
+      bool queued_report = false;
       portENTER_CRITICAL(&report_lock);
-      if (digital_queue_counts[player] > 0) {
-        DigitalEdge &edge = digital_queues[player][digital_queue_heads[player]];
-        if (--edge.reports_remaining == 0) {
-          digital_queue_heads[player] = (digital_queue_heads[player] + 1) % kDigitalQueueDepth;
-          digital_queue_counts[player]--;
-        }
+      if (now - last_input_ms[player] > kInputTimeoutMs) {
+        reports[player] = {0, 8, 128, 128, 128, 128, 0};
+        report_queue_heads[player] = 0;
+        report_queue_counts[player] = 0;
+      }
+      SwitchReport report = reports[player];
+      if (report_queue_counts[player] > 0) {
+        report = report_queues[player][report_queue_heads[player]];
+        queued_report = true;
       }
       portEXIT_CRITICAL(&report_lock);
+      const bool sent = tud_mounted() && tud_hid_n_ready(player) && tud_hid_n_report(player, 0, &report, sizeof(report));
+      if (sent && queued_report) {
+        portENTER_CRITICAL(&report_lock);
+        if (report_queue_counts[player] > 0) {
+          report_queue_heads[player] = (report_queue_heads[player] + 1) % kReportQueueDepth;
+          report_queue_counts[player]--;
+        }
+        portEXIT_CRITICAL(&report_lock);
+      }
     }
-    player = (player + 1) % kControllerCount;
     vTaskDelay(pdMS_TO_TICKS(1));
   }
 }
@@ -422,8 +408,8 @@ extern "C" void app_main() {
   ESP_ERROR_CHECK(nvs_flash_init());
   for (uint8_t i = 0; i < kControllerCount; i++) {
     reports[i] = {0, 8, 128, 128, 128, 128, 0};
-    digital_queue_heads[i] = 0;
-    digital_queue_counts[i] = 0;
+    report_queue_heads[i] = 0;
+    report_queue_counts[i] = 0;
     last_input_ms[i] = 0;
   }
   connect_wifi();
