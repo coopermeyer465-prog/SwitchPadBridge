@@ -129,7 +129,7 @@ const char INDEX_HTML[] PROGMEM = R"HTML(
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#0b0e12;color:#f5f7fa;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;touch-action:none;user-select:none;-webkit-user-select:none}
 button{font:inherit;color:inherit;touch-action:none;cursor:pointer}
-.gamepad{position:fixed;inset:0;width:100vw;height:100vh;height:100dvh;overflow:hidden;background:#0b0e12}
+.gamepad{position:fixed;inset:0;width:100vw;height:100vh;height:100dvh;overflow:hidden;background-color:#0b0e12;background-size:cover;background-position:center;background-repeat:no-repeat}
 .side{position:absolute;top:0;bottom:0;width:50%;min-width:300px}
 .left{left:0}.right{right:0}
 .utility{position:absolute;z-index:5;top:max(14px,env(safe-area-inset-top));left:50%;display:flex;gap:clamp(8px,1.4vw,18px);transform:translateX(-50%)}
@@ -161,6 +161,7 @@ button{font:inherit;color:inherit;touch-action:none;cursor:pointer}
 .layout-tools button:disabled{opacity:.35;cursor:default}
 .layout-tools svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 .layout-tools #swapSticks.active{background:#176b69;border-color:#24d6cf}
+.layout-tools #chooseBackground.active{background:#176b69;border-color:#24d6cf}.no-background #removeBackground{display:none}
 .player-select{display:none}
 .edit-actions{display:none;gap:7px}.editing .edit-actions{display:flex}.editing #editLayout{display:none}
 .editing [data-move]{outline:1px dashed #24d6cf;outline-offset:5px;cursor:move}.editing [data-move].selected{outline:2px solid #f5f7fa;outline-offset:6px}
@@ -168,11 +169,12 @@ button{font:inherit;color:inherit;touch-action:none;cursor:pointer}
 button.down,button:active{background:#3b4652!important;box-shadow:inset 0 2px 7px #000b!important;transform:translateY(1px)}
 .face button.down,.face button:active{transform:translateY(-50%) scale(.96)}#bX.down,#bX:active,#bB.down,#bB:active{transform:translateX(-50%) scale(.96)}
 .editing #bX:active,.editing #bB:active{transform:translateX(-50%)}.editing #bY:active,.editing #bA:active{transform:translateY(-50%)}
-.editing .side:before{position:absolute;z-index:8;top:92px;width:28px;height:28px;display:grid;place-items:center;border:1px solid #24d6cf;border-radius:50%;color:#24d6cf;font-weight:800;font-size:13px}.editing .left:before{content:"L";left:14px}.editing .right:before{content:"R";right:14px}.editing.sticks-swapped .left:before{content:"R"}.editing.sticks-swapped .right:before{content:"L"}
+.stick-indicator{display:none;position:absolute;z-index:8;width:clamp(92px,13vw,146px);aspect-ratio:1;place-items:center;border:2px dashed #24d6cf;border-radius:50%;background:#0b0e1266;color:#24d6cf;font-weight:850;font-size:24px;pointer-events:none}.editing .stick-indicator{display:grid}#leftStickIndicator{left:max(5vw,env(safe-area-inset-left));top:27%}#rightStickIndicator{right:max(6vw,env(safe-area-inset-right));bottom:7%}
 @media(orientation:portrait){
  .side{top:76px;width:50%;min-width:0}.utility{top:max(12px,env(safe-area-inset-top));gap:7px}.utility button{width:42px;height:40px;font-size:13px}.statusbar.connection{display:none}
  .shoulders{top:10px;gap:5px}.shoulders button{width:clamp(58px,17vw,92px);height:34px;font-size:13px}.left .shoulders{left:8px}.right .shoulders{right:8px}
  .stick{width:clamp(104px,34vw,164px)}
+ #leftStickIndicator{left:50%;top:13%;transform:translateX(-50%)}#rightStickIndicator{right:50%;bottom:7%;transform:translateX(50%)}
  .dpad{left:50%;bottom:8%;width:clamp(122px,38vw,174px);transform:translateX(-50%)}.face{right:50%;top:18%;width:clamp(142px,40vw,188px);transform:translateX(50%)}
  .statusbar.physical{max-width:76%;font-size:11px}
 }
@@ -183,10 +185,11 @@ button.down,button:active{background:#3b4652!important;box-shadow:inset 0 2px 7p
  .face{top:31%;width:clamp(126px,34vh,142px)}.face button{width:clamp(46px,12vh,52px);font-size:18px}
  .dpad{bottom:6%;width:clamp(108px,30vh,126px)}.dpad button:after{border-width:6px}
  .statusbar.physical{bottom:3px;max-width:28%}.layout-tools{bottom:max(6px,env(safe-area-inset-bottom))}
+ #leftStickIndicator{top:27%}#rightStickIndicator{bottom:4%}
 }
 </style>
 </head>
-<body>
+<body class="no-background">
 <main class="gamepad">
   <div class="utility" data-move="utility">
     <button data-bit="256" data-move="button-minus" aria-label="Minus">-</button>
@@ -195,6 +198,7 @@ button.down,button:active{background:#3b4652!important;box-shadow:inset 0 2px 7p
     <button data-bit="512" data-move="button-plus" aria-label="Plus">+</button>
   </div>
   <section class="side left" aria-label="Left controls">
+    <div id="leftStickIndicator" class="stick-indicator">L</div>
     <div class="shoulders" data-move="left-shoulders"><button data-bit="16" data-move="button-l">L</button><button data-bit="64" data-move="button-zl">ZL</button></div>
     <div id="stickL" class="control stick" data-x="lx" data-y="ly" data-click="1024"><div class="nub"></div></div>
     <div class="control dpad" data-move="dpad">
@@ -203,6 +207,7 @@ button.down,button:active{background:#3b4652!important;box-shadow:inset 0 2px 7p
     </div>
   </section>
   <section class="side right" aria-label="Right controls">
+    <div id="rightStickIndicator" class="stick-indicator">R</div>
     <div class="shoulders" data-move="right-shoulders"><button data-bit="32" data-move="button-r">R</button><button data-bit="128" data-move="button-zr">ZR</button></div>
     <div class="control face" data-move="face">
       <button id="bX" data-bit="8" data-move="button-x">X</button><button id="bB" data-bit="2" data-move="button-b">B</button>
@@ -214,9 +219,12 @@ button.down,button:active{background:#3b4652!important;box-shadow:inset 0 2px 7p
   <div id="gp" class="statusbar physical">touch controls</div>
   <button id="playerSelect" class="player-select" aria-label="Select player" title="Select player">P1</button>
   <div id="resizeHandle" class="resize-handle" aria-label="Resize selected control"></div>
+  <input id="backgroundPhoto" type="file" accept="image/*" hidden>
   <div class="layout-tools">
     <button id="editLayout" aria-label="Edit layout" title="Edit layout"><svg viewBox="0 0 24 24"><path d="M21.2 6.8a2.1 2.1 0 0 0-4-4L3.8 16.2a2 2 0 0 0-.5.8L2 21.4a.5.5 0 0 0 .6.6L7 20.7a2 2 0 0 0 .8-.5z"/><path d="m15 5 4 4"/></svg></button>
     <div class="edit-actions">
+      <button id="chooseBackground" aria-label="Choose background photo" title="Background photo"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.5"/><path d="m21 15-5-5L5 19"/></svg></button>
+      <button id="removeBackground" aria-label="Remove background photo" title="Remove background"><svg viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 15H6L5 6M10 11v6M14 11v6"/></svg></button>
       <button id="swapSticks" aria-label="Swap analog stick sides" title="Swap sticks"><svg viewBox="0 0 24 24"><path d="M7 7h11l-3-3"/><path d="m18 7-3 3"/><path d="M17 17H6l3 3"/><path d="m6 17 3-3"/></svg></button>
       <button id="undoLayout" aria-label="Undo layout change" title="Undo"><svg viewBox="0 0 24 24"><path d="M9 7 4 12l5 5"/><path d="M4 12h9a7 7 0 0 1 7 7"/></svg></button>
       <button id="resetLayout" aria-label="Reset layout" title="Reset to default"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></button>
@@ -234,6 +242,14 @@ let ws,connected=false,lastSent="",physicalConnected=false,wsFailures=0,useHttp=
 let player=0,sticksSwapped=false;
 const dot=document.getElementById("dot"),statusEl=document.getElementById("status"),gpEl=document.getElementById("gp");
 const playerSelect=document.getElementById("playerSelect");
+const gamepadEl=document.querySelector(".gamepad"),photoInput=document.getElementById("backgroundPhoto"),chooseBackground=document.getElementById("chooseBackground"),removeBackground=document.getElementById("removeBackground");
+const backgroundKey="switchpad-background-v1";
+function applyBackground(data=""){gamepadEl.style.backgroundImage=data?`url("${data}")`:"";document.body.classList.toggle("no-background",!data);chooseBackground.classList.toggle("active",!!data)}
+function loadBackground(){try{applyBackground(localStorage.getItem(backgroundKey)||"")}catch(e){applyBackground()}}
+chooseBackground.addEventListener("click",()=>photoInput.click());
+removeBackground.addEventListener("click",()=>{try{localStorage.removeItem(backgroundKey)}catch(e){}applyBackground()});
+photoInput.addEventListener("change",()=>{const file=photoInput.files&&photoInput.files[0];photoInput.value="";if(!file)return;const img=new Image(),url=URL.createObjectURL(file);img.onload=()=>{const scale=Math.min(1,1280/img.width,1280/img.height),canvas=document.createElement("canvas");canvas.width=Math.max(1,Math.round(img.width*scale));canvas.height=Math.max(1,Math.round(img.height*scale));canvas.getContext("2d").drawImage(img,0,0,canvas.width,canvas.height);URL.revokeObjectURL(url);const data=canvas.toDataURL("image/jpeg",.76);try{localStorage.setItem(backgroundKey,data);applyBackground(data)}catch(e){statusEl.textContent="photo too large"}};img.onerror=()=>{URL.revokeObjectURL(url);statusEl.textContent="photo unsupported"};img.src=url});
+loadBackground();
 function showPlayer(){playerSelect.textContent=`P${player+1}`;playerSelect.title=`Controller ${player+1}`}
 showPlayer();
 function connect(){
@@ -287,7 +303,7 @@ const movable=[...document.querySelectorAll("[data-move]")];
 const layoutKey=()=>`switchpad-layout-v1-${matchMedia("(orientation:portrait)").matches?"portrait":"landscape"}`;
 function setOffset(el,x,y){el.dataset.moveX=String(Math.round(x));el.dataset.moveY=String(Math.round(y));el.style.translate=`${Math.round(x)}px ${Math.round(y)}px`}
 function setSize(el,w,h){if(w){el.dataset.sizeW=String(Math.round(w));el.style.width=`${Math.round(w)}px`}else{delete el.dataset.sizeW;el.style.removeProperty("width")}if(h){el.dataset.sizeH=String(Math.round(h));el.style.height=`${Math.round(h)}px`}else{delete el.dataset.sizeH;el.style.removeProperty("height")}}
-function setStickSwap(value){sticksSwapped=!!value;document.body.classList.toggle("sticks-swapped",sticksSwapped);swapButton.classList.toggle("active",sticksSwapped)}
+function setStickSwap(value){sticksSwapped=!!value;document.body.classList.toggle("sticks-swapped",sticksSwapped);swapButton.classList.toggle("active",sticksSwapped);document.getElementById("leftStickIndicator").textContent=sticksSwapped?"R":"L";document.getElementById("rightStickIndicator").textContent=sticksSwapped?"L":"R"}
 function readLayout(){const layout=Object.fromEntries(movable.map(el=>[el.dataset.move,{x:Number(el.dataset.moveX)||0,y:Number(el.dataset.moveY)||0,w:Number(el.dataset.sizeW)||0,h:Number(el.dataset.sizeH)||0}]));layout.__sticksSwapped=sticksSwapped;return layout}
 function applyLayout(layout={}){for(const el of movable){const p=layout[el.dataset.move]||{x:0,y:0,w:0,h:0};setOffset(el,p.x,p.y);setSize(el,p.w,p.h)}setStickSwap(layout.__sticksSwapped);positionResizeHandle()}
 function loadLayout(){try{applyLayout(JSON.parse(localStorage.getItem(layoutKey())||"{}"))}catch(e){applyLayout()}}
