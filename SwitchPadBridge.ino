@@ -19,7 +19,7 @@
 static const uint16_t HTTP_PORT = 80;
 static const uint16_t UDP_PORT = 7777;
 static const uint16_t WS_PORT = 81;
-static const uint8_t CONTROLLER_COUNT = 4;
+static const uint8_t CONTROLLER_COUNT = 1;
 static const uint32_t REPORT_INTERVAL_US = 4000;
 static const uint32_t INPUT_TIMEOUT_MS = 800;
 static const uint32_t WS_READ_TIMEOUT_MS = 500;
@@ -62,7 +62,8 @@ public:
   }
 
   bool send(uint8_t player, const SwitchReport &report) {
-    return hid.SendReport(player + 1, &report, sizeof(report), 2);
+    (void)player;
+    return hid.SendReport(0, &report, sizeof(report), 2);
   }
 
   uint16_t _onGetDescriptor(uint8_t *buffer) override {
@@ -79,9 +80,8 @@ public:
 private:
   USBHID hid;
 
-  // Four top-level collections share one USB HID interface and use report IDs 1-4.
-  #define SWITCH_GAMEPAD_REPORT(ID) \
-    0x05, 0x01, 0x09, 0x05, 0xA1, 0x01, 0x85, ID, \
+  #define SWITCH_GAMEPAD_REPORT \
+    0x05, 0x01, 0x09, 0x05, 0xA1, 0x01, \
     0x15, 0x00, 0x25, 0x01, 0x35, 0x00, 0x45, 0x01, \
     0x75, 0x01, 0x95, 0x10, 0x05, 0x09, 0x19, 0x01, \
     0x29, 0x10, 0x81, 0x02, 0x05, 0x01, 0x25, 0x07, \
@@ -93,10 +93,7 @@ private:
     0x0A, 0x21, 0x26, 0x95, 0x08, 0x91, 0x02, 0xC0
 
   static constexpr uint8_t reportDescriptor[] = {
-    SWITCH_GAMEPAD_REPORT(1),
-    SWITCH_GAMEPAD_REPORT(2),
-    SWITCH_GAMEPAD_REPORT(3),
-    SWITCH_GAMEPAD_REPORT(4)
+    SWITCH_GAMEPAD_REPORT
   };
 
   #undef SWITCH_GAMEPAD_REPORT
@@ -159,7 +156,7 @@ button{font:inherit;color:inherit;touch-action:none;cursor:pointer}
 .layout-tools{position:fixed;z-index:12;right:max(10px,env(safe-area-inset-right));bottom:max(10px,env(safe-area-inset-bottom));display:flex;gap:7px}
 .layout-tools button{position:relative;width:38px;height:38px;display:grid;place-items:center;border:1px solid #4b5561;border-radius:7px;background:#20262d;box-shadow:0 4px 10px #0008}
 .layout-tools svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.player-select{position:fixed;z-index:12;left:max(10px,env(safe-area-inset-left));bottom:max(10px,env(safe-area-inset-bottom));width:44px;height:38px;border:1px solid #4b5561;border-radius:7px;background:#20262d;box-shadow:0 4px 10px #0008;font-weight:800}
+.player-select{display:none}
 .edit-actions{display:none;gap:7px}.editing .edit-actions{display:flex}.editing #editLayout{display:none}
 .editing [data-move]{outline:1px dashed #24d6cf;outline-offset:5px;cursor:move}.editing button[data-bit],.editing button[data-dir]{pointer-events:none}
 button.down,button:active{background:#3b4652!important;box-shadow:inset 0 2px 7px #000b!important;transform:translateY(1px)}
@@ -216,12 +213,11 @@ const touch=neutral(), physical=neutral();
 const activeSticks={lx:false,rx:false};
 const dirs=new Set();
 let ws,connected=false,lastSent="",physicalConnected=false,wsFailures=0,useHttp=false,httpBusy=false,editing=false;
-let player=Math.max(0,Math.min(3,Number(localStorage.getItem("switchpad-player")||0)));
+let player=0;
 const dot=document.getElementById("dot"),statusEl=document.getElementById("status"),gpEl=document.getElementById("gp");
 const playerSelect=document.getElementById("playerSelect");
 function showPlayer(){playerSelect.textContent=`P${player+1}`;playerSelect.title=`Controller ${player+1}`}
 showPlayer();
-playerSelect.addEventListener("click",()=>{player=(player+1)%4;localStorage.setItem("switchpad-player",String(player));lastSent="";showPlayer();send(true)});
 function connect(){
   if(useHttp)return;
   ws=new WebSocket(`ws://${location.hostname}:81/ws`);
