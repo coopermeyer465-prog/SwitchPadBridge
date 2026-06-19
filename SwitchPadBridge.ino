@@ -172,16 +172,16 @@ button{font:inherit;color:inherit;touch-action:none;cursor:pointer}
 button.down,button.desktop-lit,button:active{background:#3b4652!important;box-shadow:inset 0 2px 7px #000b!important;transform:translateY(1px)}
 .face button.down,.face button.desktop-lit,.face button:active{transform:translateY(-50%) scale(.96)}#bX.down,#bX.desktop-lit,#bX:active,#bB.down,#bB.desktop-lit,#bB:active{transform:translateX(-50%) scale(.96)}
 .editing #bX:active,.editing #bB:active{transform:translateX(-50%)}.editing #bY:active,.editing #bA:active{transform:translateY(-50%)}
-.stick-indicator{display:none;position:absolute;z-index:8;width:clamp(92px,13vw,146px);aspect-ratio:1;place-items:center;border:2px dashed #24d6cf;border-radius:50%;background:#0b0e1266;color:#24d6cf;font-weight:850;font-size:24px;pointer-events:none}.editing .stick-indicator{display:grid}#leftStickIndicator{left:max(5vw,env(safe-area-inset-left));top:27%}#rightStickIndicator{right:max(6vw,env(safe-area-inset-right));bottom:7%}
-.desktop-mode .stick{opacity:1}.desktop-mode #stickL{left:12%!important;top:42%!important}.desktop-mode #stickR{left:88%!important;top:78%!important}.desktop-mode .stick.desktop-click{border-color:#24d6cf;box-shadow:0 0 0 4px #24d6cf35,0 8px 20px #0009,inset 0 0 0 10px #222830}
+.stick-indicator{display:none;position:absolute;z-index:8;width:clamp(92px,13vw,146px);aspect-ratio:1;place-items:center;border:2px dashed #24d6cf;border-radius:50%;background:#0b0e1266;color:#24d6cf;font-weight:850;font-size:24px;pointer-events:none}.editing .stick-indicator{display:grid}#leftStickIndicator{left:max(5vw,env(safe-area-inset-left));top:27%}#rightStickIndicator{right:max(6vw,env(safe-area-inset-right));bottom:18%}
+.desktop-mode .stick{opacity:1}.desktop-mode #stickL{left:12%!important;top:42%!important}.desktop-mode #stickR{left:88%!important;top:68%!important}.desktop-mode .stick.desktop-click{border-color:#24d6cf;box-shadow:0 0 0 4px #24d6cf35,0 8px 20px #0009,inset 0 0 0 10px #222830}
 .keymap-panel{display:none;position:fixed;z-index:40;inset:7vh max(18px,calc((100vw - 680px)/2));overflow:auto;border:1px solid #4b5561;border-radius:8px;background:#11161cfa;box-shadow:0 18px 50px #000d;padding:16px;touch-action:auto}.keymap-panel.open{display:block}.keymap-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}.keymap-header strong{font-size:17px}.keymap-header button,.keymap-footer button{width:38px;height:38px;border:1px solid #4b5561;border-radius:7px;background:#20262d}.keymap-footer svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}.keymap-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px 14px}.keymap-row{display:grid;grid-template-columns:1fr minmax(110px,150px);align-items:center;gap:10px;min-height:38px;color:#c8d0d9;font-size:13px}.keymap-row button,.keymap-row select{height:34px;min-width:0;border:1px solid #4b5561;border-radius:6px;background:#20262d;color:#f5f7fa;padding:0 8px}.keymap-row input{width:100%}.keymap-footer{display:flex;justify-content:flex-end;margin-top:14px}.capturing{border-color:#24d6cf!important;color:#24d6cf!important}
-@media(hover:hover) and (pointer:fine){.desktop-mode-button{display:grid}.editing .desktop-map-only{display:grid!important}}
+@media(hover:hover) and (pointer:fine){.desktop-mode-button{display:grid}.editing .desktop-map-only{display:grid!important}.editing [data-key-hint]::before{content:attr(data-key-hint);position:absolute;z-index:20;left:50%;top:-17px;min-width:max-content;padding:2px 5px;border:1px solid #55b8ff;border-radius:4px;background:#09263d;color:#7dcbff;font-size:10px;font-weight:800;line-height:1;transform:translateX(-50%);pointer-events:none}.editing .stick-indicator[data-key-hint]::before{top:auto;bottom:8px;font-size:11px}}
 @media(orientation:portrait){
  .side{top:76px;width:50%;min-width:0}.utility{top:max(12px,env(safe-area-inset-top));gap:7px}.utility button{width:42px;height:40px;font-size:13px}.statusbar.connection{display:none}
  .shoulders{top:10px;gap:5px}.shoulders button{width:clamp(58px,17vw,92px);height:34px;font-size:13px}.left .shoulders{left:8px}.right .shoulders{right:8px}
  .stick{width:clamp(104px,34vw,164px)}
- .desktop-mode #stickL{left:25%!important;top:29%!important}.desktop-mode #stickR{left:75%!important;top:74%!important}
- #leftStickIndicator{left:50%;top:13%;transform:translateX(-50%)}#rightStickIndicator{right:50%;bottom:7%;transform:translateX(50%)}
+ .desktop-mode #stickL{left:25%!important;top:29%!important}.desktop-mode #stickR{left:75%!important;top:65%!important}
+ #leftStickIndicator{left:50%;top:13%;transform:translateX(-50%)}#rightStickIndicator{right:50%;bottom:18%;transform:translateX(50%)}
  .dpad{left:50%;bottom:8%;width:clamp(122px,38vw,174px);transform:translateX(-50%)}.face{right:50%;top:18%;width:clamp(142px,40vw,188px);transform:translateX(50%)}
  .statusbar.physical{max-width:76%;font-size:11px}
 }
@@ -192,7 +192,7 @@ button.down,button.desktop-lit,button:active{background:#3b4652!important;box-sh
  .face{top:31%;width:clamp(126px,34vh,142px)}.face button{width:clamp(46px,12vh,52px);font-size:18px}
  .dpad{bottom:6%;width:clamp(108px,30vh,126px)}.dpad button:after{border-width:6px}
  .statusbar.physical{bottom:3px;max-width:28%}.layout-tools{bottom:max(6px,env(safe-area-inset-bottom))}
- #leftStickIndicator{top:27%}#rightStickIndicator{bottom:4%}
+ #leftStickIndicator{top:27%}#rightStickIndicator{bottom:15%}
 }
 </style>
 </head>
@@ -252,7 +252,7 @@ const neutral=()=>({buttons:0,hat:8,lx:128,ly:128,rx:128,ry:128});
 const touch=neutral(),physical=neutral(),desktop=neutral();
 const activeSticks={lx:false,rx:false},desktopAxes={lx:false,rx:false};
 const dirs=new Set();
-let ws,connected=false,lastSent="",physicalConnected=false,wsFailures=0,useHttp=false,httpBusy=false,editing=false;
+let ws,connected=false,lastSent="",physicalConnected=false,wsFailures=0,useHttp=false,httpBusy=false,editing=false,lastWireMs=0,sendTimer=0;
 let player=0,sticksSwapped=false,desktopMode=false,mouseVX=0,mouseVY=0;
 const desktopKeys=new Set(),desktopMouseButtons=new Set();
 const dot=document.getElementById("dot"),statusEl=document.getElementById("status"),gpEl=document.getElementById("gp");
@@ -284,11 +284,14 @@ function merged(){
 function payload(){const s=merged();return `player=${player}&buttons=${s.buttons}&hat=${s.hat}&lx=${s.lx}&ly=${s.ly}&rx=${s.rx}&ry=${s.ry}`}
 function send(force=false){
   const p=payload();if(!force&&p===lastSent)return;
+  const now=performance.now();
+  if(!force&&now-lastWireMs<8){if(!sendTimer)sendTimer=setTimeout(()=>{sendTimer=0;send()},Math.max(1,8-(performance.now()-lastWireMs)));return}
+  lastWireMs=now;
   if(connected&&ws?.readyState===WebSocket.OPEN){ws.send(p);lastSent=p;return}
   if(useHttp&&!httpBusy){httpBusy=true;fetch("/api/input",{method:"POST",headers:{"Content-Type":"text/plain"},body:p}).then(r=>{if(!r.ok)throw Error() ;dot.classList.add("ok");statusEl.textContent="connected";lastSent=p}).catch(()=>{dot.classList.remove("ok");statusEl.textContent="reconnecting"}).finally(()=>httpBusy=false)}
 }
 const desktopButton=document.getElementById("desktopMode");
-const mappingKey="switchpad-desktop-map-v1";
+const mappingKey="switchpad-desktop-map-v2";
 const mappingActions=[
   ["leftUp","Left stick up","KeyW"],["leftDown","Left stick down","KeyS"],["leftLeft","Left stick left","KeyA"],["leftRight","Left stick right","KeyD"],
   ["dpadUp","D-pad up","ArrowUp"],["dpadDown","D-pad down","ArrowDown"],["dpadLeft","D-pad left","ArrowLeft"],["dpadRight","D-pad right","ArrowRight"],
@@ -296,18 +299,26 @@ const mappingActions=[
   ["minus","Minus","Backspace"],["plus","Plus","Enter"],["lclick","Left stick click","KeyZ"],["rclick","Right stick click","KeyX"],["home","Home","KeyH"],["capture","Capture","KeyP"]
 ];
 const actionBits={a:4,b:2,x:8,y:1,l:16,r:32,zl:64,zr:128,minus:256,plus:512,lclick:1024,rclick:2048,home:4096,capture:8192};
-const defaultDesktopMapping=()=>({keys:Object.fromEntries(mappingActions.map(([id,,code])=>[id,code])),mouseLeft:"zr",mouseRight:"zl",mouseAxis:"right",sensitivity:2.8});
+const defaultDesktopMapping=()=>({keys:Object.fromEntries(mappingActions.map(([id,,code])=>[id,code])),mouseLeft:"zr",mouseRight:"zl",mouseAxis:"right",sensitivity:5.2});
 let desktopMapping=defaultDesktopMapping(),captureAction="";
 function loadDesktopMapping(){try{const saved=JSON.parse(localStorage.getItem(mappingKey)||"null");if(saved)desktopMapping={...defaultDesktopMapping(),...saved,keys:{...defaultDesktopMapping().keys,...saved.keys}}}catch(e){desktopMapping=defaultDesktopMapping()}}
 function saveDesktopMapping(){try{localStorage.setItem(mappingKey,JSON.stringify(desktopMapping))}catch(e){}}
 function keyLabel(code){return code.replace(/^Key/,"").replace(/^Digit/,"").replace("Arrow","").replace("Left"," L").replace("Right"," R")}
 function actionOptions(selected){return `<option value="">None</option>${Object.keys(actionBits).map(id=>`<option value="${id}"${id===selected?" selected":""}>${id.toUpperCase()}</option>`).join("")}`}
-function renderKeymap(){
-  const grid=document.getElementById("keymapGrid");grid.innerHTML=mappingActions.map(([id,label])=>`<label class="keymap-row"><span>${label}</span><button data-map-key="${id}">${keyLabel(desktopMapping.keys[id])}</button></label>`).join("")+`<label class="keymap-row"><span>Mouse left</span><select id="mouseLeftMap">${actionOptions(desktopMapping.mouseLeft)}</select></label><label class="keymap-row"><span>Mouse right</span><select id="mouseRightMap">${actionOptions(desktopMapping.mouseRight)}</select></label><label class="keymap-row"><span>Mouse movement</span><select id="mouseAxisMap"><option value="right"${desktopMapping.mouseAxis==="right"?" selected":""}>Right stick</option><option value="left"${desktopMapping.mouseAxis==="left"?" selected":""}>Left stick</option><option value="off"${desktopMapping.mouseAxis==="off"?" selected":""}>Off</option></select></label><label class="keymap-row"><span>Mouse sensitivity</span><input id="mouseSensitivity" type="range" min="0.8" max="6" step="0.2" value="${desktopMapping.sensitivity}"></label>`;
-  for(const button of grid.querySelectorAll("[data-map-key]"))button.addEventListener("click",()=>{captureAction=button.dataset.mapKey;button.textContent="Press key";button.classList.add("capturing")});
-  for(const [id,key] of [["mouseLeftMap","mouseLeft"],["mouseRightMap","mouseRight"],["mouseAxisMap","mouseAxis"],["mouseSensitivity","sensitivity"]])document.getElementById(id).addEventListener("input",e=>{desktopMapping[key]=key==="sensitivity"?Number(e.target.value):e.target.value;saveDesktopMapping()});
+function updateMappingHints(){
+  const hint=id=>{const labels=[keyLabel(desktopMapping.keys[id])];if(desktopMapping.mouseLeft===id)labels.push("M1");if(desktopMapping.mouseRight===id)labels.push("M2");return labels.join(" / ")};
+  for(const [id,bit] of Object.entries(actionBits)){const button=document.querySelector(`button[data-bit="${bit}"]`);if(button)button.dataset.keyHint=hint(id)}
+  for(const [id,dir] of [["dpadUp","up"],["dpadDown","down"],["dpadLeft","left"],["dpadRight","right"]])document.querySelector(`button[data-dir="${dir}"]`).dataset.keyHint=keyLabel(desktopMapping.keys[id]);
+  const leftKeys=["leftUp","leftLeft","leftDown","leftRight"].map(id=>keyLabel(desktopMapping.keys[id])).join(" ");
+  document.getElementById("leftStickIndicator").dataset.keyHint=`${leftKeys}${desktopMapping.mouseAxis==="left"?" + MOUSE":""}`;
+  document.getElementById("rightStickIndicator").dataset.keyHint=desktopMapping.mouseAxis==="right"?"MOUSE":"UNMAPPED";
 }
-loadDesktopMapping();
+function renderKeymap(){
+  const grid=document.getElementById("keymapGrid");grid.innerHTML=mappingActions.map(([id,label])=>`<label class="keymap-row"><span>${label}</span><button data-map-key="${id}">${keyLabel(desktopMapping.keys[id])}</button></label>`).join("")+`<label class="keymap-row"><span>Mouse left</span><select id="mouseLeftMap">${actionOptions(desktopMapping.mouseLeft)}</select></label><label class="keymap-row"><span>Mouse right</span><select id="mouseRightMap">${actionOptions(desktopMapping.mouseRight)}</select></label><label class="keymap-row"><span>Mouse movement</span><select id="mouseAxisMap"><option value="right"${desktopMapping.mouseAxis==="right"?" selected":""}>Right stick</option><option value="left"${desktopMapping.mouseAxis==="left"?" selected":""}>Left stick</option><option value="off"${desktopMapping.mouseAxis==="off"?" selected":""}>Off</option></select></label><label class="keymap-row"><span>Mouse sensitivity</span><input id="mouseSensitivity" type="range" min="1" max="12" step="0.2" value="${desktopMapping.sensitivity}"></label>`;
+  for(const button of grid.querySelectorAll("[data-map-key]"))button.addEventListener("click",()=>{captureAction=button.dataset.mapKey;button.textContent="Press key";button.classList.add("capturing")});
+  for(const [id,key] of [["mouseLeftMap","mouseLeft"],["mouseRightMap","mouseRight"],["mouseAxisMap","mouseAxis"],["mouseSensitivity","sensitivity"]])document.getElementById(id).addEventListener("input",e=>{desktopMapping[key]=key==="sensitivity"?Number(e.target.value):e.target.value;saveDesktopMapping();updateMappingHints()});
+}
+loadDesktopMapping();updateMappingHints();
 function pointerLocked(){return (document.pointerLockElement||document.webkitPointerLockElement)===gamepadEl}
 function syncDesktopVisuals(){
   const active=desktopMode;
@@ -321,10 +332,10 @@ function syncDesktopVisuals(){
     stick.classList.toggle("desktop-click",active&&!!(desktop.buttons&bit));
   }
 }
-function updateDesktopInput(){
+function updateDesktopInput(urgent=false){
   let buttons=0;for(const [id,bit] of Object.entries(actionBits))if(desktopKeys.has(desktopMapping.keys[id]))buttons|=bit;if(desktopMouseButtons.has(0))buttons|=actionBits[desktopMapping.mouseLeft]||0;if(desktopMouseButtons.has(2))buttons|=actionBits[desktopMapping.mouseRight]||0;desktop.buttons=buttons;
   const left=desktopKeys.has(desktopMapping.keys.leftLeft),right=desktopKeys.has(desktopMapping.keys.leftRight),up=desktopKeys.has(desktopMapping.keys.leftUp),down=desktopKeys.has(desktopMapping.keys.leftDown);desktopAxes.lx=left||right||up||down;desktop.lx=128+(right?127:0)-(left?127:0);desktop.ly=128+(down?127:0)-(up?127:0);
-  const du=desktopKeys.has(desktopMapping.keys.dpadUp),dd=desktopKeys.has(desktopMapping.keys.dpadDown),dl=desktopKeys.has(desktopMapping.keys.dpadLeft),dr=desktopKeys.has(desktopMapping.keys.dpadRight);desktop.hat=du&&dr?1:dr&&dd?3:dd&&dl?5:dl&&du?7:du?0:dr?2:dd?4:dl?6:8;syncDesktopVisuals();send();
+  const du=desktopKeys.has(desktopMapping.keys.dpadUp),dd=desktopKeys.has(desktopMapping.keys.dpadDown),dl=desktopKeys.has(desktopMapping.keys.dpadLeft),dr=desktopKeys.has(desktopMapping.keys.dpadRight);desktop.hat=du&&dr?1:dr&&dd?3:dd&&dl?5:dl&&du?7:du?0:dr?2:dd?4:dl?6:8;syncDesktopVisuals();send(urgent);
 }
 function clearDesktopInput(){desktopKeys.clear();desktopMouseButtons.clear();mouseVX=mouseVY=0;Object.assign(desktop,neutral());desktopAxes.lx=desktopAxes.rx=false;syncDesktopVisuals();send(true)}
 async function enterDesktopMode(){
@@ -332,9 +343,9 @@ async function enterDesktopMode(){
   try{const requestFullscreen=gamepadEl.requestFullscreen||gamepadEl.webkitRequestFullscreen;if(requestFullscreen){const result=requestFullscreen.call(gamepadEl);if(result&&result.then)await result}desktopMode=true;document.body.classList.add("desktop-mode");const requestLock=gamepadEl.requestPointerLock||gamepadEl.webkitRequestPointerLock;if(requestLock){const result=requestLock.call(gamepadEl);if(result&&result.catch)result.catch(()=>{})}}catch(e){statusEl.textContent="fullscreen unavailable"}
 }
 desktopButton.addEventListener("click",enterDesktopMode);
-document.getElementById("editKeymap").addEventListener("click",()=>{renderKeymap();document.getElementById("keymapPanel").classList.add("open")});
+document.getElementById("editKeymap").addEventListener("click",()=>{updateMappingHints();renderKeymap();document.getElementById("keymapPanel").classList.add("open")});
 document.getElementById("closeKeymap").addEventListener("click",()=>{captureAction="";document.getElementById("keymapPanel").classList.remove("open")});
-document.getElementById("resetKeymap").addEventListener("click",()=>{desktopMapping=defaultDesktopMapping();saveDesktopMapping();renderKeymap()});
+document.getElementById("resetKeymap").addEventListener("click",()=>{desktopMapping=defaultDesktopMapping();saveDesktopMapping();updateMappingHints();renderKeymap()});
 document.addEventListener("fullscreenchange",()=>{desktopMode=document.fullscreenElement===gamepadEl;document.body.classList.toggle("desktop-mode",desktopMode);if(!desktopMode)clearDesktopInput()});
 document.addEventListener("webkitfullscreenchange",()=>{desktopMode=document.webkitFullscreenElement===gamepadEl;document.body.classList.toggle("desktop-mode",desktopMode);if(!desktopMode)clearDesktopInput()});
 document.addEventListener("pointerlockchange",()=>{if(!pointerLocked()){
@@ -343,15 +354,15 @@ document.addEventListener("pointerlockchange",()=>{if(!pointerLocked()){
   else{desktop.rx=desktop.ry=128;desktopAxes.rx=false}
   updateDesktopInput()
 }});
-document.addEventListener("keydown",e=>{if(captureAction){e.preventDefault();desktopMapping.keys[captureAction]=e.code;captureAction="";saveDesktopMapping();renderKeymap();return}if(!desktopMode||!Object.values(desktopMapping.keys).includes(e.code)||e.target===photoInput)return;e.preventDefault();desktopKeys.add(e.code);updateDesktopInput()});
-document.addEventListener("keyup",e=>{if(!Object.values(desktopMapping.keys).includes(e.code))return;if(desktopMode)e.preventDefault();desktopKeys.delete(e.code);updateDesktopInput()});
+document.addEventListener("keydown",e=>{if(captureAction){e.preventDefault();desktopMapping.keys[captureAction]=e.code;captureAction="";saveDesktopMapping();updateMappingHints();renderKeymap();return}if(!desktopMode||!Object.values(desktopMapping.keys).includes(e.code)||e.target===photoInput)return;e.preventDefault();if(e.repeat)return;desktopKeys.add(e.code);updateDesktopInput(true)});
+document.addEventListener("keyup",e=>{if(!Object.values(desktopMapping.keys).includes(e.code))return;if(desktopMode)e.preventDefault();desktopKeys.delete(e.code);updateDesktopInput(true)});
 document.addEventListener("mousemove",e=>{if(!desktopMode||!pointerLocked()||desktopMapping.mouseAxis==="off")return;mouseVX=Math.max(-127,Math.min(127,mouseVX+e.movementX*desktopMapping.sensitivity));mouseVY=Math.max(-127,Math.min(127,mouseVY+e.movementY*desktopMapping.sensitivity));const left=desktopMapping.mouseAxis==="left";desktopAxes[left?"lx":"rx"]=true;desktop[left?"lx":"rx"]=Math.round(128+mouseVX);desktop[left?"ly":"ry"]=Math.round(128+mouseVY);syncDesktopVisuals();send()});
-document.addEventListener("mousedown",e=>{if(!desktopMode||!pointerLocked())return;e.preventDefault();e.stopPropagation();desktopMouseButtons.add(e.button);updateDesktopInput()},true);
-document.addEventListener("mouseup",e=>{if(!desktopMode)return;e.preventDefault();desktopMouseButtons.delete(e.button);updateDesktopInput()},true);
+document.addEventListener("mousedown",e=>{if(!desktopMode||!pointerLocked())return;e.preventDefault();e.stopPropagation();desktopMouseButtons.add(e.button);updateDesktopInput(true)},true);
+document.addEventListener("mouseup",e=>{if(!desktopMode)return;e.preventDefault();desktopMouseButtons.delete(e.button);updateDesktopInput(true)},true);
 window.addEventListener("blur",clearDesktopInput);
-function desktopFrame(){const left=desktopMapping.mouseAxis==="left",axis=left?"lx":"rx";if(desktopMode&&pointerLocked()&&desktopAxes[axis]){mouseVX*=.72;mouseVY*=.72;if(Math.abs(mouseVX)<.7)mouseVX=0;if(Math.abs(mouseVY)<.7)mouseVY=0;desktop[axis]=Math.round(128+mouseVX);desktop[left?"ly":"ry"]=Math.round(128+mouseVY);desktopAxes[axis]=mouseVX!==0||mouseVY!==0;syncDesktopVisuals();send()}requestAnimationFrame(desktopFrame)}desktopFrame();
+function desktopFrame(){const left=desktopMapping.mouseAxis==="left",axis=left?"lx":"rx";if(desktopMode&&pointerLocked()&&desktopAxes[axis]){mouseVX*=.82;mouseVY*=.82;if(Math.abs(mouseVX)<.7)mouseVX=0;if(Math.abs(mouseVY)<.7)mouseVY=0;desktop[axis]=Math.round(128+mouseVX);desktop[left?"ly":"ry"]=Math.round(128+mouseVY);desktopAxes[axis]=mouseVX!==0||mouseVY!==0;syncDesktopVisuals();send()}requestAnimationFrame(desktopFrame)}desktopFrame();
 function pressButton(el,on){
-  const bit=Number(el.dataset.bit);touch.buttons=on?touch.buttons|bit:touch.buttons&~bit;el.classList.toggle("down",on);send();
+  const bit=Number(el.dataset.bit);touch.buttons=on?touch.buttons|bit:touch.buttons&~bit;el.classList.toggle("down",on);send(true);
   if(on&&navigator.vibrate)navigator.vibrate(8);
 }
 for(const b of document.querySelectorAll("button[data-bit]")){
@@ -363,7 +374,7 @@ for(const b of document.querySelectorAll("button[data-bit]")){
 }
 function updateHat(){
   const u=dirs.has("up"),d=dirs.has("down"),l=dirs.has("left"),r=dirs.has("right");
-  touch.hat=u&&r?1:r&&d?3:d&&l?5:l&&u?7:u?0:r?2:d?4:l?6:8;send();
+  touch.hat=u&&r?1:r&&d?3:d&&l?5:l&&u?7:u?0:r?2:d?4:l?6:8;send(true);
 }
 for(const b of document.querySelectorAll("button[data-dir]")){
   let lastPointer=0;
@@ -702,12 +713,17 @@ void pollWebSocket() {
     }
     if (slot >= 0) {
       wsClients[slot] = next;
+      wsClients[slot].setNoDelay(true);
       handleWsHandshake(wsClients[slot]);
     } else {
       next.stop();
     }
   }
-  for (uint8_t i = 0; i < CONTROLLER_COUNT; i++) pollWsClient(wsClients[i]);
+  for (uint8_t i = 0; i < CONTROLLER_COUNT; i++) {
+    for (uint8_t frame = 0; frame < 4 && wsClients[i] && wsClients[i].connected() && wsClients[i].available() >= 2; frame++) {
+      pollWsClient(wsClients[i]);
+    }
+  }
 }
 
 void pollUdp() {
