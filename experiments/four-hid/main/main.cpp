@@ -20,7 +20,7 @@
 
 static constexpr uint8_t kControllerCount = 4;
 static constexpr uint8_t kDigitalQueueDepth = 32;
-static constexpr uint8_t kDigitalEdgeReports = 2;
+static constexpr uint8_t kDigitalEdgeReports = 1;
 static constexpr uint32_t kInputTimeoutMs = 900;
 static constexpr uint32_t kClientLeaseMs = 15000;
 static const char *kTag = "switchpad-4hid";

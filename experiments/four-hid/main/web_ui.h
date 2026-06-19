@@ -196,8 +196,9 @@ const legacyMappingKey="switchpad-desktop-map-v1";
 const mappingActions=[
   ["leftUp","Left stick up","KeyW"],["leftDown","Left stick down","KeyS"],["leftLeft","Left stick left","KeyA"],["leftRight","Left stick right","KeyD"],
   ["dpadUp","D-pad up","ArrowUp"],["dpadDown","D-pad down","ArrowDown"],["dpadLeft","D-pad left","ArrowLeft"],["dpadRight","D-pad right","ArrowRight"],
+  ["home","Home","KeyH"],["capture","Capture","KeyP"],
   ["a","A","Space"],["b","B","KeyC"],["x","X","KeyR"],["y","Y","KeyF"],["l","L","KeyQ"],["r","R","KeyE"],["zl","ZL","ShiftLeft"],["zr","ZR","ControlLeft"],
-  ["minus","Minus","Backspace"],["plus","Plus","Enter"],["lclick","Left stick click","KeyZ"],["rclick","Right stick click","KeyX"],["home","Home","KeyH"],["capture","Capture","KeyP"]
+  ["minus","Minus","Backspace"],["plus","Plus","Enter"],["lclick","Left stick click","KeyZ"],["rclick","Right stick click","KeyX"]
 ];
 const actionBits={a:4,b:2,x:8,y:1,l:16,r:32,zl:64,zr:128,minus:256,plus:512,lclick:1024,rclick:2048,home:4096,capture:8192};
 const defaultDesktopMapping=()=>({keys:Object.fromEntries(mappingActions.map(([id,,code])=>[id,code])),mouseLeft:"zr",mouseRight:"zl",mouseAxis:"right",sensitivity:5.2});
