@@ -11,6 +11,7 @@
 #include "esp_system.h"
 #include "esp_wifi.h"
 #include "lwip/ip_addr.h"
+#include "lwip/sockets.h"
 #include "nvs_flash.h"
 #include "tinyusb.h"
 #include "tinyusb_default_config.h"
@@ -20,6 +21,7 @@
 
 static constexpr uint8_t kControllerCount = 4;
 static constexpr uint8_t kReportQueueDepth = 64;
+static constexpr uint16_t kRelayPort = 7777;
 static constexpr uint32_t kInputTimeoutMs = 900;
 static constexpr uint32_t kClientLeaseMs = 15000;
 static const char *kTag = "switchpad-4hid";
@@ -226,6 +228,35 @@ static int apply_input(const char *body) {
   return player;
 }
 
+static void udp_input_task(void *) {
+  const int sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_IP);
+  if (sock < 0) {
+    ESP_LOGE(kTag, "Could not create UDP input socket");
+    vTaskDelete(nullptr);
+    return;
+  }
+
+  sockaddr_in address = {};
+  address.sin_family = AF_INET;
+  address.sin_port = htons(kRelayPort);
+  address.sin_addr.s_addr = htonl(INADDR_ANY);
+  if (bind(sock, reinterpret_cast<sockaddr *>(&address), sizeof(address)) < 0) {
+    ESP_LOGE(kTag, "Could not bind UDP input port %u", kRelayPort);
+    close(sock);
+    vTaskDelete(nullptr);
+    return;
+  }
+
+  ESP_LOGI(kTag, "Windows relay input listening on UDP %u", kRelayPort);
+  char payload[256];
+  while (true) {
+    const int length = recvfrom(sock, payload, sizeof(payload) - 1, 0, nullptr, nullptr);
+    if (length <= 0) continue;
+    payload[length] = '\0';
+    apply_input(payload);
+  }
+}
+
 static esp_err_t claim_handler(httpd_req_t *req) {
   char query[96] = {};
   char device_id[40] = {};
@@ -414,6 +445,7 @@ extern "C" void app_main() {
   }
   connect_wifi();
   start_http_server();
+  xTaskCreate(udp_input_task, "udp_input", 4096, nullptr, 5, nullptr);
   tinyusb_config_t tusb_cfg = TINYUSB_DEFAULT_CONFIG();
   tusb_cfg.descriptor.device = &device_descriptor;
   tusb_cfg.descriptor.string = string_descriptors;

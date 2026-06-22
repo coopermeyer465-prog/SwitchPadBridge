@@ -4,6 +4,8 @@ This firmware exposes four independent Pokken-compatible HID interfaces from one
 
 Each browser installation gets a persistent local device ID. The ESP32 assigns active devices to P1-P4, keeps reconnecting devices on their existing slot, and returns a clear busy response when all four slots are occupied. An inactive slot becomes available after 15 seconds. Inputs use WebSocket with an automatic HTTP fallback.
 
+The Windows remote-play relay can also send the same input payloads to UDP port `7777`. Its fixed device IDs claim P1-P4 in order, and unchanged heartbeat packets keep those slots alive without adding duplicate USB reports.
+
 The build uses ESP-IDF 5.2 plus Espressif's `esp_tinyusb` and `tinyusb` components. Set `SWITCHPAD_ESP_USB_ROOT` to an `espressif/esp-usb` checkout. Put an `espressif/tinyusb` release/v0.17 checkout in a folder named `tinyusb`, then set `SWITCHPAD_TINYUSB_PARENT` to its parent before running `idf.py build`.
 
 ## Flashing

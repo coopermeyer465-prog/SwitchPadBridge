@@ -39,6 +39,8 @@ The four-report-ID experiment was rejected by the Pokken controller profile and 
 
 A separate app only works if it sends input directly to the ESP32. The firmware currently accepts its compact input format over UDP port `7777`; OSC apps such as TouchOSC would require a small OSC parser or a custom bridge.
 
+The four-interface experiment includes a [Windows remote-play relay](host/windows-relay/README.md). It reads up to four XInput controllers created by Sunshine for Moonlight clients and forwards them over the LAN to four separate USB controller interfaces on the Switch. A capture card is not required to test this input path.
+
 ## Keyboard and mouse
 
 On a computer, click the fullscreen icon in the lower-left corner to enter desktop controller mode. The page uses pointer lock so mouse motion drives the right stick and automatically springs back to center. Press Escape to release the mouse and leave fullscreen.
