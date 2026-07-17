@@ -1,6 +1,6 @@
 # Four-controller SwitchPad bridge
 
-This firmware exposes four independent Pokken-compatible HID interfaces from one ESP32-S3 USB device and serves the complete SwitchPad controller at `http://192.168.0.107/`.
+This firmware exposes four independent Pokken-compatible HID interfaces from one ESP32-S3 USB device and serves the complete SwitchPad controller at `http://switchpad.local/`.
 
 Each browser installation gets a persistent local device ID. The ESP32 assigns active devices to P1-P4, keeps reconnecting devices on their existing slot, and returns a clear busy response when all four slots are occupied. An inactive slot becomes available after 15 seconds. Inputs use WebSocket with an automatic HTTP fallback.
 
@@ -16,7 +16,7 @@ On the development Mac, open a new Terminal and run:
 ESP32 Flash
 ```
 
-The command builds the latest firmware and sends it to the bridge over Wi-Fi at `192.168.0.107`. The OTA partition layout must first be installed with one USB bootloader flash; the same command detects that bootloader and performs the initial flash automatically. Later updates do not require the reset or boot buttons.
+The command builds the latest firmware and sends it to the bridge over Wi-Fi at `switchpad.local`. The OTA partition layout must first be installed with one USB bootloader flash; the same command detects that bootloader and performs the initial flash automatically. Later updates do not require the reset or boot buttons.
 
 ## Controller limit
 

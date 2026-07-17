@@ -2,6 +2,7 @@
 #include <cstdlib>
 
 #include "freertos/FreeRTOS.h"
+#include "freertos/event_groups.h"
 #include "freertos/task.h"
 #include "esp_event.h"
 #include "esp_http_server.h"
@@ -10,6 +11,7 @@
 #include "esp_ota_ops.h"
 #include "esp_system.h"
 #include "esp_wifi.h"
+#include "mdns.h"
 #include "lwip/ip_addr.h"
 #include "lwip/sockets.h"
 #include "nvs_flash.h"
@@ -25,6 +27,7 @@ static constexpr uint16_t kRelayPort = 7777;
 static constexpr uint32_t kInputTimeoutMs = 900;
 static constexpr uint32_t kClientLeaseMs = 15000;
 static const char *kTag = "switchpad-4hid";
+static constexpr EventBits_t kWifiConnectedBit = BIT0;
 
 struct SwitchReport {
   uint16_t buttons;
@@ -43,6 +46,7 @@ static portMUX_TYPE report_lock = portMUX_INITIALIZER_UNLOCKED;
 static SwitchReport report_queues[kControllerCount][kReportQueueDepth];
 static uint8_t report_queue_heads[kControllerCount];
 static uint8_t report_queue_counts[kControllerCount];
+static EventGroupHandle_t wifi_events;
 
 struct ClientSlot {
   char device_id[40];
@@ -382,18 +386,29 @@ static void start_http_server() {
   ESP_ERROR_CHECK(httpd_register_uri_handler(server, &websocket_uri));
 }
 
+static void wifi_event_handler(void *, esp_event_base_t event_base, int32_t event_id, void *event_data) {
+  if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
+    xEventGroupClearBits(wifi_events, kWifiConnectedBit);
+    esp_wifi_connect();
+    return;
+  }
+  if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
+    const auto *event = static_cast<ip_event_got_ip_t *>(event_data);
+    ESP_LOGI(kTag, "Wi-Fi ready at " IPSTR, IP2STR(&event->ip_info.ip));
+    xEventGroupSetBits(wifi_events, kWifiConnectedBit);
+  }
+}
+
 static void connect_wifi() {
+  wifi_events = xEventGroupCreate();
   ESP_ERROR_CHECK(esp_netif_init());
   ESP_ERROR_CHECK(esp_event_loop_create_default());
   esp_netif_t *netif = esp_netif_create_default_wifi_sta();
-  esp_netif_dhcpc_stop(netif);
-  esp_netif_ip_info_t ip_info = {};
-  ip_info.ip.addr = ipaddr_addr("192.168.0.107");
-  ip_info.gw.addr = ipaddr_addr("192.168.0.1");
-  ip_info.netmask.addr = ipaddr_addr("255.255.255.0");
-  ESP_ERROR_CHECK(esp_netif_set_ip_info(netif, &ip_info));
+  ESP_ERROR_CHECK(esp_netif_set_hostname(netif, "switchpad"));
   wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
   ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+  ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, WIFI_EVENT_STA_DISCONNECTED, &wifi_event_handler, nullptr));
+  ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &wifi_event_handler, nullptr));
   wifi_config_t wifi_config = {};
   strlcpy(reinterpret_cast<char *>(wifi_config.sta.ssid), WIFI_SSID, sizeof(wifi_config.sta.ssid));
   strlcpy(reinterpret_cast<char *>(wifi_config.sta.password), WIFI_PASSWORD, sizeof(wifi_config.sta.password));
@@ -402,6 +417,11 @@ static void connect_wifi() {
   ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
   ESP_ERROR_CHECK(esp_wifi_start());
   ESP_ERROR_CHECK(esp_wifi_connect());
+  xEventGroupWaitBits(wifi_events, kWifiConnectedBit, pdFALSE, pdFALSE, portMAX_DELAY);
+  ESP_ERROR_CHECK(mdns_init());
+  ESP_ERROR_CHECK(mdns_hostname_set("switchpad"));
+  ESP_ERROR_CHECK(mdns_instance_name_set("SwitchPad"));
+  ESP_ERROR_CHECK(mdns_service_add("SwitchPad Controller", "_http", "_tcp", 80, nullptr, 0));
 }
 
 static void usb_report_task(void *) {
@@ -453,5 +473,5 @@ extern "C" void app_main() {
   tusb_cfg.descriptor.full_speed_config = configuration_descriptor;
   ESP_ERROR_CHECK(tinyusb_driver_install(&tusb_cfg));
   xTaskCreate(usb_report_task, "usb_reports", 4096, nullptr, 6, nullptr);
-  ESP_LOGI(kTag, "Four HID interfaces ready at http://192.168.0.107/");
+  ESP_LOGI(kTag, "Four HID interfaces ready at http://switchpad.local/");
 }
