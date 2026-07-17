@@ -68,13 +68,51 @@ J/K/U/I are alternate B/A/Y/X bindings for emulator-style keyboard layouts. Keyb
 
 ### Four-HID ESP-IDF Firmware
 
-This branch's multi-controller firmware lives in `experiments/four-hid`. On the development Mac, run:
+This branch's multi-controller firmware lives in `experiments/four-hid`.
 
-```sh
-ESP32 Flash
-```
+To put it on a XIAO ESP32-S3:
 
-That helper builds the ESP-IDF firmware and attempts an OTA update at `http://switchpad.local/api/update`. If the bridge is not reachable over Wi-Fi, it falls back to a USB bootloader flash on `/dev/cu.usbmodem*`.
+1. Clone the project and enter the repo:
+
+   ```sh
+   git clone https://github.com/coopermeyer465-prog/SwitchPadBridge.git
+   cd SwitchPadBridge
+   git checkout experiment/four-hid-interfaces
+   ```
+
+2. Create local Wi-Fi credentials:
+
+   ```sh
+   cp secrets.h.example secrets.h
+   ```
+
+   Edit `secrets.h` and set `WIFI_SSID` and `WIFI_PASSWORD` to the Wi-Fi network the phone, tablet, or computer will use. This file is ignored by Git so private Wi-Fi passwords do not get committed.
+
+3. Install ESP-IDF 5.2 and the local component dependencies used by `scripts/esp32-flash.sh`. On the development Mac for this repo, the helper expects ESP-IDF at `~/esp/esp-idf` and will fetch Espressif's USB, TinyUSB, and mDNS dependencies if they are missing.
+
+4. Put the XIAO ESP32-S3 in bootloader mode. On a working reset button, double-press reset. If the reset button is damaged, briefly short the reset pads according to the XIAO ESP32-S3 hardware docs. The board should appear as `/dev/cu.usbmodem*` on macOS.
+
+5. Flash the firmware:
+
+   ```sh
+   ESP32 Flash
+   ```
+
+   If the `ESP32 Flash` shell shortcut is not installed, run the helper directly:
+
+   ```sh
+   ./scripts/esp32-flash.sh
+   ```
+
+6. After the ESP32 reboots and joins Wi-Fi, open:
+
+   ```text
+   http://switchpad.local/
+   ```
+
+   If mDNS does not resolve on a network, look up the ESP32's DHCP address in the router or with `arp -a`, then open `http://<esp32-ip>/`.
+
+The helper builds the ESP-IDF firmware and attempts an OTA update at `http://switchpad.local/api/update`. If the bridge is not reachable over Wi-Fi, it falls back to a USB bootloader flash on `/dev/cu.usbmodem*`.
 
 The firmware now uses DHCP instead of a fixed IP address and advertises itself as `switchpad.local` with mDNS. Local Wi-Fi credentials go in `secrets.h`, which is ignored by Git.
 
