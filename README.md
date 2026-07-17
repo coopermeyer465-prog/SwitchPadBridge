@@ -3,7 +3,7 @@
 Turn a Seeed Studio XIAO ESP32-S3 into a Wi-Fi-to-USB controller bridge for Nintendo Switch and Switch 2 experimentation.
 
 ```text
-iPhone, iPad, or paired Bluetooth controller
+iPhone, iPad, computer, or paired Bluetooth controller
                  |
               Wi-Fi
                  |
@@ -14,10 +14,10 @@ iPhone, iPad, or paired Bluetooth controller
        Nintendo Switch / Switch 2
 ```
 
-The ESP32 hosts a responsive touch gamepad at `http://switchpad.local/`. The page can also read a PlayStation, Xbox, Joy-Con, Backbone, or other OS-supported standard controller paired with or connected to the iPhone or iPad through the browser Gamepad API. Input is forwarded over Wi-Fi and emitted through the ESP32-S3 native USB interface.
+The ESP32 hosts a responsive touch gamepad at `http://switchpad.local/`. The page can also read a PlayStation, Xbox, Joy-Con, Backbone, or other OS-supported standard controller paired with or connected to the phone, tablet, or computer through the browser Gamepad API. Input is forwarded over Wi-Fi and emitted through the ESP32-S3 native USB interface.
 
 > [!IMPORTANT]
-> This is prototype firmware. Its USB profile emulates a HORI Pokken wired controller, a known target for original Switch projects. Switch 2 acceptance must still be tested on real hardware.
+> This is prototype firmware. Its USB profile emulates HORI Pokken wired controllers, a known target for original Switch projects. Switch 2 acceptance must still be tested on real hardware.
 
 ## iPhone and iPad
 
@@ -33,13 +33,15 @@ The layout responds to phone/iPad size and orientation. Touch and physical-contr
 
 Tap the pencil in the lower-right corner to edit the layout. Every button can be moved and resized independently, while the utility, shoulder, and face groups can still be moved as units. The selected item has a turquoise corner handle that changes its width and height. The crossed-arrows control swaps which side drives the left and right analog sticks; L/R indicators appear at the original fixed-stick locations while editing. The photo control chooses a full-viewport background image, which is compressed and stored only on that phone or iPad, and the adjacent trash control removes it. Undo reverses moves, resizes, swaps, and Reset actions one step at a time; Cancel discards the entire layout edit, and Save stores separate portrait and landscape layouts locally on that device. Short iPhone landscape screens use a more compact layout while iPad sizing remains unchanged.
 
-## Multi-player status
+## Multi-player Status
 
-The four-report-ID experiment was rejected by the Pokken controller profile and produced invalid button input. The stable firmware therefore exposes one USB controller, and multiple connected phones intentionally feed that same controller. A genuine multi-player version needs separate USB device addresses, which this XIAO cannot provide through its single USB device controller without additional hub/device hardware. TinyUSB's hub support is host-side, so a descriptor-only "virtual hub" cannot create working downstream controllers; the remaining one-board experiment is a custom composite device with multiple separate HID interfaces.
+This branch exposes four separate Pokken-compatible HID interfaces from one ESP32-S3. Each browser device gets a persistent local device ID, and the firmware assigns active devices to player slots P1 through P4. Reconnecting devices keep their slot when possible, and inactive slots are released after a short timeout.
 
-A separate app only works if it sends input directly to the ESP32. The firmware currently accepts its compact input format over UDP port `7777`; OSC apps such as TouchOSC would require a small OSC parser or a custom bridge.
+The ESP32-S3 cannot expose eight genuine USB controller interfaces with this profile because its native USB peripheral has a limited endpoint budget. Four interfaces is the practical target for this one-board experiment. Smash Bros. can support more players, but going beyond four would require different hardware or an external USB architecture.
 
-The four-interface experiment includes a [Windows remote-play relay](host/windows-relay/README.md). It reads up to four XInput controllers created by Sunshine for Moonlight clients and forwards them over the LAN to four separate USB controller interfaces on the Switch. A capture card is not required to test this input path.
+A separate app only works if it sends input directly to the ESP32. The firmware accepts the compact input format over UDP port `7777`; OSC apps such as TouchOSC would require a small OSC parser or a custom bridge.
+
+The project also includes a [Windows remote-play relay](host/windows-relay/README.md). It reads up to four XInput controllers created by Sunshine for Moonlight clients and forwards them over the LAN to the four USB controller interfaces on the Switch. A capture card is not required to test this input path.
 
 ## Keyboard and mouse
 
@@ -62,9 +64,23 @@ While editing on a computer, use the keyboard icon to change every key binding, 
 
 J/K/U/I are alternate B/A/Y/X bindings for emulator-style keyboard layouts. Keyboard mappings activate only inside desktop controller mode, so the page does not capture normal typing outside fullscreen.
 
-## Build and Flash
+## Build And Flash
+
+### Four-HID ESP-IDF Firmware
+
+This branch's multi-controller firmware lives in `experiments/four-hid`. On the development Mac, run:
+
+```sh
+ESP32 Flash
+```
+
+That helper builds the ESP-IDF firmware and attempts an OTA update at `http://switchpad.local/api/update`. If the bridge is not reachable over Wi-Fi, it falls back to a USB bootloader flash on `/dev/cu.usbmodem*`.
+
+The firmware now uses DHCP instead of a fixed IP address and advertises itself as `switchpad.local` with mDNS. Local Wi-Fi credentials go in `secrets.h`, which is ignored by Git.
 
 ### Arduino IDE
+
+The older Arduino firmware is still useful as a simpler single-controller reference:
 
 1. Install the Espressif `esp32` board package.
 2. Open `SwitchPadBridge.ino` and select `XIAO_ESP32S3`.
@@ -91,11 +107,11 @@ Every transport accepts the same URL-encoded payload:
 buttons=0x0004&hat=8&lx=128&ly=128&rx=128&ry=128
 ```
 
-- WebSocket: `ws://<esp32-ip>:81/ws`
+- WebSocket: `ws://<esp32-ip>/ws`
 - HTTP POST: `http://<esp32-ip>/api/input`
 - UDP: `<esp32-ip>:7777`
-- State: `GET http://<esp32-ip>/api/state`
-- Health check: `GET http://<esp32-ip>/health`
+- Slot claim: `GET http://<esp32-ip>/api/claim?device=<device-id>`
+- OTA update: `POST http://<esp32-ip>/api/update`
 
 Stick values are `0..255`, centered at `128`. Hat values are `0..7`, with `8` neutral. Button bits are defined in `SwitchButton` near the top of the sketch.
 
@@ -103,7 +119,7 @@ Stick values are `0..255`, centered at `128`. Hat values are `0..7`, with `8` ne
 
 - If Safari loads and then reports that the server stopped responding, flash the latest firmware. Earlier versions could block forever on a partially delivered WebSocket frame.
 - Confirm the ESP32 and phone are on the same non-guest Wi-Fi and that client isolation is disabled.
-- Test `/health` first. It should immediately return `ok`.
+- Test `http://switchpad.local/` first. It should load the controller page.
 - On the Switch, enable wired Pro Controller communication if that setting is available.
 - The controller-only build has no USB serial port. Double-press the XIAO reset button to return to bootloader mode for the next upload.
 - If a computer recognizes `HORI CO.,LTD. POKKEN CONTROLLER` but Switch 2 does not, the likely next task is updating the USB profile; the Wi-Fi input path can remain unchanged.
@@ -111,3 +127,9 @@ Stick values are `0..255`, centered at `128`. Hat values are `0..7`, with `8` ne
 ## License
 
 MIT
+
+## Built With Codex
+
+Codex was used as the pair-programming agent for this project. It helped inspect the existing firmware, build the ESP-IDF four-HID experiment, tune the browser controller UI, add desktop keyboard/mouse support, add OTA flashing, switch the bridge from a fixed IP to DHCP plus `switchpad.local`, and repeatedly build, flash, test, commit, and push changes from the local workspace.
+
+The project still depends on real hardware testing. Codex helped move quickly through firmware and UI iterations, but the Switch behavior, controller timing, Wi-Fi reliability, and product hardware choices all need hands-on validation.
