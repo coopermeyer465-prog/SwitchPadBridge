@@ -185,7 +185,7 @@ function postInput(p){
 function send(force=false){
   if(!claimed)return;const p=payload();if(!force&&p===lastSent)return;
   const now=performance.now();
-  if(!force&&now-lastWireMs<8){if(!sendTimer)sendTimer=setTimeout(()=>{sendTimer=0;send()},Math.max(1,8-(performance.now()-lastWireMs)));return}
+  if(!force&&now-lastWireMs<4){if(!sendTimer)sendTimer=setTimeout(()=>{sendTimer=0;send()},Math.max(1,4-(performance.now()-lastWireMs)));return}
   lastWireMs=now;
   if(connected&&ws?.readyState===WebSocket.OPEN){ws.send(p);lastSent=p;return}
   if(useHttp){if(httpBusy){pendingPayload=p;return}postInput(p)}

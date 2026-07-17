@@ -22,7 +22,6 @@
 #include "web_ui.h"
 
 static constexpr uint8_t kControllerCount = 4;
-static constexpr uint8_t kReportQueueDepth = 64;
 static constexpr uint16_t kRelayPort = 7777;
 static constexpr uint32_t kInputTimeoutMs = 900;
 static constexpr uint32_t kClientLeaseMs = 15000;
@@ -43,9 +42,6 @@ static SwitchReport reports[kControllerCount];
 static uint32_t last_input_ms[kControllerCount];
 static portMUX_TYPE report_lock = portMUX_INITIALIZER_UNLOCKED;
 
-static SwitchReport report_queues[kControllerCount][kReportQueueDepth];
-static uint8_t report_queue_heads[kControllerCount];
-static uint8_t report_queue_counts[kControllerCount];
 static EventGroupHandle_t wifi_events;
 
 struct ClientSlot {
@@ -139,22 +135,8 @@ static bool valid_device_id(const char *device_id) {
 static void neutralize(uint8_t player) {
   portENTER_CRITICAL(&report_lock);
   reports[player] = {0, 8, 128, 128, 128, 128, 0};
-  report_queue_heads[player] = 0;
-  report_queue_counts[player] = 0;
   last_input_ms[player] = 0;
   portEXIT_CRITICAL(&report_lock);
-}
-
-static void queue_report(uint8_t player, const SwitchReport &report) {
-  uint8_t &count = report_queue_counts[player];
-  uint8_t &head = report_queue_heads[player];
-  if (count == kReportQueueDepth) {
-    head = (head + 1) % kReportQueueDepth;
-    count--;
-  }
-  const uint8_t tail = (head + count) % kReportQueueDepth;
-  report_queues[player][tail] = report;
-  count++;
 }
 
 static int claim_slot(const char *device_id) {
@@ -225,7 +207,6 @@ static int apply_input(const char *body) {
   if (next.hat > 8) next.hat = 8;
   next.vendor = 0;
   portENTER_CRITICAL(&report_lock);
-  if (memcmp(&next, &reports[player], sizeof(next)) != 0) queue_report(player, next);
   reports[player] = next;
   last_input_ms[player] = now_ms();
   portEXIT_CRITICAL(&report_lock);
@@ -428,28 +409,13 @@ static void usb_report_task(void *) {
   while (true) {
     const uint32_t now = xTaskGetTickCount() * portTICK_PERIOD_MS;
     for (uint8_t player = 0; player < kControllerCount; player++) {
-      bool queued_report = false;
       portENTER_CRITICAL(&report_lock);
       if (now - last_input_ms[player] > kInputTimeoutMs) {
         reports[player] = {0, 8, 128, 128, 128, 128, 0};
-        report_queue_heads[player] = 0;
-        report_queue_counts[player] = 0;
       }
       SwitchReport report = reports[player];
-      if (report_queue_counts[player] > 0) {
-        report = report_queues[player][report_queue_heads[player]];
-        queued_report = true;
-      }
       portEXIT_CRITICAL(&report_lock);
-      const bool sent = tud_mounted() && tud_hid_n_ready(player) && tud_hid_n_report(player, 0, &report, sizeof(report));
-      if (sent && queued_report) {
-        portENTER_CRITICAL(&report_lock);
-        if (report_queue_counts[player] > 0) {
-          report_queue_heads[player] = (report_queue_heads[player] + 1) % kReportQueueDepth;
-          report_queue_counts[player]--;
-        }
-        portEXIT_CRITICAL(&report_lock);
-      }
+      if (tud_mounted() && tud_hid_n_ready(player)) tud_hid_n_report(player, 0, &report, sizeof(report));
     }
     vTaskDelay(pdMS_TO_TICKS(1));
   }
@@ -459,8 +425,6 @@ extern "C" void app_main() {
   ESP_ERROR_CHECK(nvs_flash_init());
   for (uint8_t i = 0; i < kControllerCount; i++) {
     reports[i] = {0, 8, 128, 128, 128, 128, 0};
-    report_queue_heads[i] = 0;
-    report_queue_counts[i] = 0;
     last_input_ms[i] = 0;
   }
   connect_wifi();
