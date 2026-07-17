@@ -70,7 +70,18 @@ J/K/U/I are alternate B/A/Y/X bindings for emulator-style keyboard layouts. Keyb
 
 This branch's multi-controller firmware lives in `experiments/four-hid`.
 
-To put it on a XIAO ESP32-S3:
+For consumers, Wi-Fi setup should happen from a phone:
+
+1. Plug the SwitchPad ESP32 into power.
+2. If it has not been configured yet, join the Wi-Fi network named `SwitchPad Setup-XXXX`.
+3. Open `http://192.168.4.1/`.
+4. Enter the home Wi-Fi name and password, then tap Save.
+5. The ESP32 saves the Wi-Fi settings, reboots, joins the home network, and advertises `http://switchpad.local/`.
+6. Put the phone, tablet, or computer back on the same home Wi-Fi and open `http://switchpad.local/`.
+
+If the home Wi-Fi password changes later, power the ESP32 where it cannot join the old network. After about 15 seconds it starts `SwitchPad Setup-XXXX` again so new Wi-Fi settings can be saved.
+
+For developers flashing a blank XIAO ESP32-S3:
 
 1. Clone the project and enter the repo:
 
@@ -80,13 +91,13 @@ To put it on a XIAO ESP32-S3:
    git checkout experiment/four-hid-interfaces
    ```
 
-2. Create local Wi-Fi credentials:
+2. Optional: create local Wi-Fi credentials for development:
 
    ```sh
    cp secrets.h.example secrets.h
    ```
 
-   Edit `secrets.h` and set `WIFI_SSID` and `WIFI_PASSWORD` to the Wi-Fi network the phone, tablet, or computer will use. This file is ignored by Git so private Wi-Fi passwords do not get committed.
+   Edit `secrets.h` and set `WIFI_SSID` and `WIFI_PASSWORD` only if you want the development build to know a network immediately after flashing. This file is ignored by Git so private Wi-Fi passwords do not get committed. If this file is missing or still contains placeholder values, the ESP32 starts the phone setup network instead.
 
 3. Install ESP-IDF 5.2 and the local component dependencies used by `scripts/esp32-flash.sh`. On the development Mac for this repo, the helper expects ESP-IDF at `~/esp/esp-idf` and will fetch Espressif's USB, TinyUSB, and mDNS dependencies if they are missing.
 
@@ -114,7 +125,7 @@ To put it on a XIAO ESP32-S3:
 
 The helper builds the ESP-IDF firmware and attempts an OTA update at `http://switchpad.local/api/update`. If the bridge is not reachable over Wi-Fi, it falls back to a USB bootloader flash on `/dev/cu.usbmodem*`.
 
-The firmware now uses DHCP instead of a fixed IP address and advertises itself as `switchpad.local` with mDNS. Local Wi-Fi credentials go in `secrets.h`, which is ignored by Git.
+The firmware uses DHCP instead of a fixed IP address and advertises itself as `switchpad.local` with mDNS. Saved Wi-Fi credentials live in the ESP32's NVS flash storage.
 
 ### Arduino IDE
 
@@ -149,6 +160,7 @@ buttons=0x0004&hat=8&lx=128&ly=128&rx=128&ry=128
 - HTTP POST: `http://<esp32-ip>/api/input`
 - UDP: `<esp32-ip>:7777`
 - Slot claim: `GET http://<esp32-ip>/api/claim?device=<device-id>`
+- Wi-Fi setup: `POST http://192.168.4.1/api/wifi`
 - OTA update: `POST http://<esp32-ip>/api/update`
 
 Stick values are `0..255`, centered at `128`. Hat values are `0..7`, with `8` neutral. Button bits are defined in `SwitchButton` near the top of the sketch.

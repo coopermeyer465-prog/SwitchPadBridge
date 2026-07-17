@@ -9,22 +9,35 @@
 #include "esp_log.h"
 #include "esp_netif.h"
 #include "esp_ota_ops.h"
+#include "esp_mac.h"
 #include "esp_system.h"
 #include "esp_wifi.h"
 #include "mdns.h"
 #include "lwip/ip_addr.h"
 #include "lwip/sockets.h"
 #include "nvs_flash.h"
+#include "nvs.h"
 #include "tinyusb.h"
 #include "tinyusb_default_config.h"
 #include "class/hid/hid_device.h"
+#if __has_include("secrets.h")
 #include "secrets.h"
+#endif
 #include "web_ui.h"
+
+#ifndef WIFI_SSID
+#define WIFI_SSID ""
+#endif
+
+#ifndef WIFI_PASSWORD
+#define WIFI_PASSWORD ""
+#endif
 
 static constexpr uint8_t kControllerCount = 4;
 static constexpr uint16_t kRelayPort = 7777;
 static constexpr uint32_t kInputTimeoutMs = 900;
 static constexpr uint32_t kClientLeaseMs = 15000;
+static constexpr uint32_t kWifiConnectTimeoutMs = 15000;
 static const char *kTag = "switchpad-4hid";
 static constexpr EventBits_t kWifiConnectedBit = BIT0;
 
@@ -43,6 +56,7 @@ static uint32_t last_input_ms[kControllerCount];
 static portMUX_TYPE report_lock = portMUX_INITIALIZER_UNLOCKED;
 
 static EventGroupHandle_t wifi_events;
+static bool setup_mode = false;
 
 struct ClientSlot {
   char device_id[40];
@@ -112,10 +126,59 @@ extern "C" uint16_t tud_hid_get_report_cb(uint8_t, uint8_t, hid_report_type_t, u
 
 extern "C" void tud_hid_set_report_cb(uint8_t, uint8_t, hid_report_type_t, uint8_t const *, uint16_t) {}
 
+static const char kSetupHtml[] = R"HTML(
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SwitchPad Setup</title>
+<style>
+body{margin:0;background:#101419;color:#f7fafc;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+main{max-width:420px;margin:0 auto;padding:32px 20px}
+h1{font-size:28px;margin:0 0 10px}
+p{color:#b9c3cf;line-height:1.45}
+label{display:block;margin:18px 0 8px;font-weight:700}
+input,button{box-sizing:border-box;width:100%;height:48px;border-radius:8px;font:inherit}
+input{border:1px solid #3d4752;background:#171d24;color:#fff;padding:0 12px}
+button{margin-top:22px;border:0;background:#21c7bd;color:#061012;font-weight:850}
+#status{min-height:24px;margin-top:16px;color:#9ee9e4}
+</style>
+</head>
+<body>
+<main>
+<h1>SwitchPad Wi-Fi</h1>
+<p>Connect SwitchPad to the same Wi-Fi your phone, tablet, or computer will use. It will reboot and open later at <strong>switchpad.local</strong>.</p>
+<form id="form">
+<label for="ssid">Wi-Fi name</label>
+<input id="ssid" name="ssid" autocomplete="wifi ssid" required>
+<label for="password">Wi-Fi password</label>
+<input id="password" name="password" type="password" autocomplete="current-password">
+<button>Save and reboot</button>
+</form>
+<p id="status"></p>
+</main>
+<script>
+form.addEventListener("submit",async e=>{
+  e.preventDefault();
+  status.textContent="Saving...";
+  const body=new URLSearchParams(new FormData(form));
+  try{
+    const r=await fetch("/api/wifi",{method:"POST",body});
+    if(!r.ok)throw Error(await r.text());
+    status.textContent="Saved. Rebooting now. Join your normal Wi-Fi, then open switchpad.local.";
+  }catch(err){status.textContent=`Could not save: ${err.message}`}
+});
+</script>
+</body>
+</html>
+)HTML";
+
 static esp_err_t root_handler(httpd_req_t *req) {
   httpd_resp_set_type(req, "text/html");
   httpd_resp_set_hdr(req, "Cache-Control", "no-store");
-  return httpd_resp_send(req, INDEX_HTML, HTTPD_RESP_USE_STRLEN);
+  return setup_mode ? httpd_resp_send(req, kSetupHtml, HTTPD_RESP_USE_STRLEN)
+                    : httpd_resp_send(req, INDEX_HTML, HTTPD_RESP_USE_STRLEN);
 }
 
 static uint32_t now_ms() {
@@ -173,6 +236,64 @@ static bool body_value(const char *body, const char *key, char *value, size_t va
     cursor += key_length;
   }
   return false;
+}
+
+static int hex_value(char c) {
+  if (c >= '0' && c <= '9') return c - '0';
+  if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+  if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+  return -1;
+}
+
+static void url_decode(char *value) {
+  char *write = value;
+  for (char *read = value; *read; read++) {
+    if (*read == '+') {
+      *write++ = ' ';
+    } else if (*read == '%' && hex_value(read[1]) >= 0 && hex_value(read[2]) >= 0) {
+      *write++ = static_cast<char>((hex_value(read[1]) << 4) | hex_value(read[2]));
+      read += 2;
+    } else {
+      *write++ = *read;
+    }
+  }
+  *write = '\0';
+}
+
+static bool placeholder_credentials(const char *ssid) {
+  return ssid[0] == '\0' || strcmp(ssid, "your-wifi-name") == 0;
+}
+
+static bool load_wifi_credentials(char *ssid, size_t ssid_size, char *password, size_t password_size) {
+  nvs_handle_t nvs = 0;
+  if (nvs_open("wifi", NVS_READONLY, &nvs) == ESP_OK) {
+    size_t ssid_length = ssid_size;
+    size_t password_length = password_size;
+    const bool ok = nvs_get_str(nvs, "ssid", ssid, &ssid_length) == ESP_OK &&
+                    nvs_get_str(nvs, "password", password, &password_length) == ESP_OK &&
+                    !placeholder_credentials(ssid);
+    nvs_close(nvs);
+    if (ok) return true;
+  }
+
+  if (!placeholder_credentials(WIFI_SSID)) {
+    strlcpy(ssid, WIFI_SSID, ssid_size);
+    strlcpy(password, WIFI_PASSWORD, password_size);
+    return true;
+  }
+  ssid[0] = '\0';
+  password[0] = '\0';
+  return false;
+}
+
+static bool save_wifi_credentials(const char *ssid, const char *password) {
+  nvs_handle_t nvs = 0;
+  if (nvs_open("wifi", NVS_READWRITE, &nvs) != ESP_OK) return false;
+  const bool ok = nvs_set_str(nvs, "ssid", ssid) == ESP_OK &&
+                  nvs_set_str(nvs, "password", password) == ESP_OK &&
+                  nvs_commit(nvs) == ESP_OK;
+  nvs_close(nvs);
+  return ok;
 }
 
 static bool read_body(httpd_req_t *req, char *body, size_t capacity) {
@@ -294,6 +415,29 @@ static esp_err_t websocket_handler(httpd_req_t *req) {
   return ESP_OK;
 }
 
+static void reboot_task(void *);
+
+static esp_err_t wifi_save_handler(httpd_req_t *req) {
+  if (!setup_mode) return httpd_resp_send_err(req, HTTPD_403_FORBIDDEN, "setup mode is not active");
+  char body[256] = {};
+  char ssid[33] = {};
+  char password[65] = {};
+  if (!read_body(req, body, sizeof(body)) ||
+      !body_value(body, "ssid", ssid, sizeof(ssid)) ||
+      !body_value(body, "password", password, sizeof(password))) {
+    return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "missing wifi settings");
+  }
+  url_decode(ssid);
+  url_decode(password);
+  if (placeholder_credentials(ssid)) return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "wifi name required");
+  if (!save_wifi_credentials(ssid, password)) {
+    return httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "could not save wifi settings");
+  }
+  const esp_err_t response = httpd_resp_sendstr(req, "wifi saved; rebooting");
+  xTaskCreate(reboot_task, "wifi_reboot", 2048, nullptr, 8, nullptr);
+  return response;
+}
+
 static void reboot_task(void *) {
   vTaskDelay(pdMS_TO_TICKS(500));
   esp_restart();
@@ -349,13 +493,14 @@ static esp_err_t update_handler(httpd_req_t *req) {
 static void start_http_server() {
   httpd_config_t config = HTTPD_DEFAULT_CONFIG();
   config.stack_size = 8192;
-  config.max_uri_handlers = 8;
+  config.max_uri_handlers = 9;
   httpd_handle_t server = nullptr;
   ESP_ERROR_CHECK(httpd_start(&server, &config));
   const httpd_uri_t root_uri = {.uri = "/", .method = HTTP_GET, .handler = root_handler, .user_ctx = nullptr};
   const httpd_uri_t claim_uri = {.uri = "/api/claim", .method = HTTP_GET, .handler = claim_handler, .user_ctx = nullptr};
   const httpd_uri_t input_uri = {.uri = "/api/input", .method = HTTP_POST, .handler = input_handler, .user_ctx = nullptr};
   const httpd_uri_t update_uri = {.uri = "/api/update", .method = HTTP_POST, .handler = update_handler, .user_ctx = nullptr};
+  const httpd_uri_t wifi_uri = {.uri = "/api/wifi", .method = HTTP_POST, .handler = wifi_save_handler, .user_ctx = nullptr};
   const httpd_uri_t websocket_uri = {
     .uri = "/ws", .method = HTTP_GET, .handler = websocket_handler, .user_ctx = nullptr,
     .is_websocket = true, .handle_ws_control_frames = false, .supported_subprotocol = nullptr,
@@ -364,13 +509,14 @@ static void start_http_server() {
   ESP_ERROR_CHECK(httpd_register_uri_handler(server, &claim_uri));
   ESP_ERROR_CHECK(httpd_register_uri_handler(server, &input_uri));
   ESP_ERROR_CHECK(httpd_register_uri_handler(server, &update_uri));
+  ESP_ERROR_CHECK(httpd_register_uri_handler(server, &wifi_uri));
   ESP_ERROR_CHECK(httpd_register_uri_handler(server, &websocket_uri));
 }
 
 static void wifi_event_handler(void *, esp_event_base_t event_base, int32_t event_id, void *event_data) {
   if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
     xEventGroupClearBits(wifi_events, kWifiConnectedBit);
-    esp_wifi_connect();
+    if (!setup_mode) esp_wifi_connect();
     return;
   }
   if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
@@ -380,29 +526,59 @@ static void wifi_event_handler(void *, esp_event_base_t event_base, int32_t even
   }
 }
 
-static void connect_wifi() {
+static bool connect_wifi() {
   wifi_events = xEventGroupCreate();
   ESP_ERROR_CHECK(esp_netif_init());
   ESP_ERROR_CHECK(esp_event_loop_create_default());
   esp_netif_t *netif = esp_netif_create_default_wifi_sta();
+  esp_netif_create_default_wifi_ap();
   ESP_ERROR_CHECK(esp_netif_set_hostname(netif, "switchpad"));
   wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
   ESP_ERROR_CHECK(esp_wifi_init(&cfg));
   ESP_ERROR_CHECK(esp_event_handler_register(WIFI_EVENT, WIFI_EVENT_STA_DISCONNECTED, &wifi_event_handler, nullptr));
   ESP_ERROR_CHECK(esp_event_handler_register(IP_EVENT, IP_EVENT_STA_GOT_IP, &wifi_event_handler, nullptr));
+  char ssid[33] = {};
+  char password[65] = {};
+  if (!load_wifi_credentials(ssid, sizeof(ssid), password, sizeof(password))) return false;
   wifi_config_t wifi_config = {};
-  strlcpy(reinterpret_cast<char *>(wifi_config.sta.ssid), WIFI_SSID, sizeof(wifi_config.sta.ssid));
-  strlcpy(reinterpret_cast<char *>(wifi_config.sta.password), WIFI_PASSWORD, sizeof(wifi_config.sta.password));
-  wifi_config.sta.threshold.authmode = WIFI_AUTH_WPA2_PSK;
+  strlcpy(reinterpret_cast<char *>(wifi_config.sta.ssid), ssid, sizeof(wifi_config.sta.ssid));
+  strlcpy(reinterpret_cast<char *>(wifi_config.sta.password), password, sizeof(wifi_config.sta.password));
+  wifi_config.sta.threshold.authmode = WIFI_AUTH_OPEN;
   ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_STA));
   ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_STA, &wifi_config));
   ESP_ERROR_CHECK(esp_wifi_start());
   ESP_ERROR_CHECK(esp_wifi_connect());
-  xEventGroupWaitBits(wifi_events, kWifiConnectedBit, pdFALSE, pdFALSE, portMAX_DELAY);
+  const EventBits_t bits = xEventGroupWaitBits(
+    wifi_events, kWifiConnectedBit, pdFALSE, pdFALSE, pdMS_TO_TICKS(kWifiConnectTimeoutMs));
+  if (!(bits & kWifiConnectedBit)) {
+    ESP_LOGW(kTag, "Wi-Fi connection timed out; starting setup mode");
+    ESP_ERROR_CHECK(esp_wifi_disconnect());
+    ESP_ERROR_CHECK(esp_wifi_stop());
+    return false;
+  }
   ESP_ERROR_CHECK(mdns_init());
   ESP_ERROR_CHECK(mdns_hostname_set("switchpad"));
   ESP_ERROR_CHECK(mdns_instance_name_set("SwitchPad"));
   ESP_ERROR_CHECK(mdns_service_add("SwitchPad Controller", "_http", "_tcp", 80, nullptr, 0));
+  return true;
+}
+
+static void start_setup_ap() {
+  setup_mode = true;
+  uint8_t mac[6] = {};
+  ESP_ERROR_CHECK(esp_read_mac(mac, ESP_MAC_WIFI_SOFTAP));
+  char ap_name[32] = {};
+  snprintf(ap_name, sizeof(ap_name), "SwitchPad Setup-%02X%02X", mac[4], mac[5]);
+  wifi_config_t ap_config = {};
+  strlcpy(reinterpret_cast<char *>(ap_config.ap.ssid), ap_name, sizeof(ap_config.ap.ssid));
+  ap_config.ap.ssid_len = strlen(ap_name);
+  ap_config.ap.channel = 1;
+  ap_config.ap.max_connection = 4;
+  ap_config.ap.authmode = WIFI_AUTH_OPEN;
+  ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
+  ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &ap_config));
+  ESP_ERROR_CHECK(esp_wifi_start());
+  ESP_LOGI(kTag, "Setup mode ready: join '%s' and open http://192.168.4.1/", ap_name);
 }
 
 static void usb_report_task(void *) {
@@ -427,7 +603,7 @@ extern "C" void app_main() {
     reports[i] = {0, 8, 128, 128, 128, 128, 0};
     last_input_ms[i] = 0;
   }
-  connect_wifi();
+  if (!connect_wifi()) start_setup_ap();
   start_http_server();
   xTaskCreate(udp_input_task, "udp_input", 4096, nullptr, 5, nullptr);
   tinyusb_config_t tusb_cfg = TINYUSB_DEFAULT_CONFIG();

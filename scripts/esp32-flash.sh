@@ -1,7 +1,8 @@
 #!/bin/zsh
 set -euo pipefail
 
-readonly PROJECT_DIR="/Users/marissameyer/Desktop/SwitchPadBridge/experiments/four-hid"
+readonly SCRIPT_DIR="${0:A:h}"
+readonly PROJECT_DIR="${SCRIPT_DIR:h}/experiments/four-hid"
 readonly IDF_DIR="/Users/marissameyer/esp/esp-idf"
 readonly PY_ENV="/Users/marissameyer/.espressif/python_env/idf5.2_py3.13_env"
 readonly ESP_USB_ROOT="/Users/marissameyer/esp/esp-usb"
